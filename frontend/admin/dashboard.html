@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard — ระบบจองห้อง</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/styles/tailwind-config.js"></script>
+  <link rel="stylesheet" href="/styles/tokens.css">
+  <link rel="stylesheet" href="/styles/accessibility.css">
+  <link rel="stylesheet" href="/styles/responsive.css">
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="/assets/js/api.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary-600 text-white px-4 py-2 rounded-lg z-50">
+    ข้ามไปที่เนื้อหาหลัก
+  </a>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const STATUS = {
+      pending:   { label: 'รออนุมัติ',  color: 'bg-yellow-100 text-yellow-800' },
+      approved:  { label: 'อนุมัติแล้ว', color: 'bg-green-100 text-green-800' },
+      rejected:  { label: 'ถูกปฏิเสธ',  color: 'bg-red-100 text-red-800' },
+      cancelled: { label: 'ยกเลิกแล้ว', color: 'bg-gray-100 text-gray-600' },
+    };
+
+    function AdminNav({ user, tab, setTab }) {
+      const links = [
+        { key: 'bookings', label: '📋 คำขอจอง' },
+        { key: 'rooms',    label: '🏠 ห้อง' },
+        { key: 'users',    label: '👤 ผู้ใช้งาน' },
+        { key: 'holidays', label: '📅 วันหยุด' },
+      ];
+      return (
+        <nav className="bg-white shadow-sm px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <span className="font-bold text-gray-800">🎬 Admin</span>
+            {links.map(l => (
+              <button key={l.key} onClick={() => setTab(l.key)}
+                className={`text-sm transition ${tab === l.key ? 'text-primary-600 font-semibold' : 'text-gray-500 hover:text-gray-800'}`}>
+                {l.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-500">{user?.name}</span>
+            <button onClick={logout} className="text-sm text-gray-400 hover:text-red-500">ออกจากระบบ</button>
+          </div>
+        </nav>
+      );
+    }
+
+    /* ─── Tab: Bookings ─── */
+    function BookingsTab() {
+      const [bookings, setBookings] = useState([]);
+      const [loading, setLoading]   = useState(true);
+      const [filter, setFilter]     = useState('pending');
+
+      useEffect(() => { loadBookings(); }, []);
+
+      async function loadBookings() {
+        try {
+          const data = await apiFetch('/api/admin/bookings');
+          setBookings(data);
+        } catch (e) { alert(e.message); }
+        finally { setLoading(false); }
+      }
+
+      async function act(id, action) {
+        try {
+          await apiFetch(`/api/admin/bookings/${id}`, { method: 'PATCH', body: { action } });
+          loadBookings();
+        } catch (e) { alert(e.message); }
+      }
+
+      const filtered = bookings.filter(b => filter === 'all' || b.Status === filter);
+
+      return (
+        <div>
+          <div className="flex gap-2 mb-4">
+            {['all','pending','approved','rejected','cancelled'].map(f => (
+              <button key={f} onClick={() => setFilter(f)}
+                className={`text-xs px-3 py-1 rounded-full border transition
+                  ${filter === f ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-600 border-gray-300 hover:border-primary-400'}`}>
+                {f === 'all' ? 'ทั้งหมด' : STATUS[f]?.label}
+                {f !== 'all' && (
+                  <span className="ml-1">({bookings.filter(b => b.Status === f).length})</span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {loading ? (
+            <div className="text-center text-gray-400 py-12">กำลังโหลด...</div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center text-gray-400 py-12">ไม่มีรายการ</div>
+          ) : (
+            <div className="space-y-3">
+              {filtered.map(b => (
+                <div key={b.BookingID} className="bg-white rounded-xl border px-5 py-4 flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold text-gray-800">{b.RoomName}</div>
+                    <div className="text-sm text-gray-500 mt-0.5">
+                      {new Date(b.BookingDate).toLocaleDateString('th-TH', { dateStyle: 'medium' })}
+                      {' · '}{b.StartTime}–{b.EndTime}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-0.5">
+                      ผู้จอง: {b.UserName} ({b.UserEmail})
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS[b.Status]?.color}`}>
+                      {STATUS[b.Status]?.label}
+                    </span>
+                    {b.Status === 'pending' && (
+                      <>
+                        <button onClick={() => act(b.BookingID, 'approved')}
+                          className="text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg transition">
+                          อนุมัติ
+                        </button>
+                        <button onClick={() => act(b.BookingID, 'rejected')}
+                          className="text-xs bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg transition">
+                          ปฏิเสธ
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* ─── Tab: Rooms ─── */
+    function RoomsTab() {
+      const [rooms, setRooms]     = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [editingRoom, setEditingRoom] = useState(null);
+      const [editForm, setEditForm] = useState({ RoomName: '', Capacity: '', Status: '' });
+      const [showAddForm, setShowAddForm] = useState(false);
+      const [addForm, setAddForm] = useState({ RoomName: '', Capacity: '', Status: 'available' });
+
+      useEffect(() => { loadRooms(); }, []);
+
+      async function loadRooms() {
+        try { setRooms(await apiFetch('/api/rooms')); }
+        catch (e) { alert(e.message); }
+        finally { setLoading(false); }
+      }
+
+      async function saveRoom(e) {
+        e.preventDefault();
+        try {
+          await apiFetch(`/api/rooms/${editingRoom.RoomID}`, {
+            method: 'PUT',
+            body: editForm
+          });
+          setEditingRoom(null);
+          loadRooms();
+        } catch (err) { alert(err.message); }
+      }
+
+      async function addRoom(e) {
+        e.preventDefault();
+        try {
+          await apiFetch('/api/rooms', {
+            method: 'POST',
+            body: addForm
+          });
+          setAddForm({ RoomName: '', Capacity: '', Status: 'available' });
+          setShowAddForm(false);
+          loadRooms();
+        } catch (err) { alert(err.message); }
+      }
+
+      async function deleteRoom(id) {
+        if (!confirm('ลบห้องนี้?')) return;
+        try {
+          await apiFetch(`/api/rooms/${id}`, { method: 'DELETE' });
+          loadRooms();
+        } catch (err) { alert(err.message); }
+      }
+
+      function startEdit(room) {
+        setEditingRoom(room);
+        setEditForm({
+          RoomName: room.RoomName,
+          Capacity: room.Capacity,
+          Status: room.Status
+        });
+      }
+
+      const ROOM_STATUS = {
+        available:   { label: 'ว่าง',      color: 'bg-green-100 text-green-800' },
+        booked:      { label: 'ไม่ว่าง',  color: 'bg-red-100 text-red-800' },
+        maintenance: { label: 'ซ่อมบำรุง', color: 'bg-orange-100 text-orange-800' },
+      };
+
+      return (
+        <div>
+          <div className="mb-4">
+            <button onClick={() => setShowAddForm(!showAddForm)} className="bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition">
+              + เพิ่มห้อง
+            </button>
+          </div>
+
+          {showAddForm && (
+            <div className="bg-white rounded-xl border p-5 mb-4">
+              <h3 className="font-semibold text-gray-700 mb-4">เพิ่มห้องใหม่</h3>
+              <form onSubmit={addRoom} className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อห้อง</label>
+                  <input
+                    value={addForm.RoomName}
+                    onChange={e => setAddForm({...addForm, RoomName: e.target.value})}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">ความจุ (คน)</label>
+                  <input
+                    type="number"
+                    value={addForm.Capacity}
+                    onChange={e => setAddForm({...addForm, Capacity: parseInt(e.target.value)})}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
+                  <select
+                    value={addForm.Status}
+                    onChange={e => setAddForm({...addForm, Status: e.target.value})}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="available">ว่าง</option>
+                    <option value="booked">ไม่ว่าง</option>
+                    <option value="maintenance">ซ่อมบำรุง</option>
+                  </select>
+                </div>
+                <div className="flex gap-2">
+                  <button type="submit" className="bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition">
+                    บันทึก
+                  </button>
+                  <button type="button" onClick={() => setShowAddForm(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-semibold px-4 py-2 rounded-lg transition">
+                    ยกเลิก
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="text-center text-gray-400 py-12">กำลังโหลด...</div>
+          ) : (
+            <div className="space-y-3">
+              {rooms.map(r => (
+                <div key={r.RoomID} className="bg-white rounded-xl border px-5 py-4">
+                  {editingRoom?.RoomID === r.RoomID ? (
+                    <form onSubmit={saveRoom} className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อห้อง</label>
+                        <input
+                          value={editForm.RoomName}
+                          onChange={e => setEditForm({...editForm, RoomName: e.target.value})}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">ความจุ (คน)</label>
+                        <input
+                          type="number"
+                          value={editForm.Capacity}
+                          onChange={e => setEditForm({...editForm, Capacity: parseInt(e.target.value)})}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
+                        <select
+                          value={editForm.Status}
+                          onChange={e => setEditForm({...editForm, Status: e.target.value})}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        >
+                          <option value="available">ว่าง</option>
+                          <option value="booked">ไม่ว่าง</option>
+                          <option value="maintenance">ซ่อมบำรุง</option>
+                        </select>
+                      </div>
+                      <div className="flex gap-2">
+                        <button type="submit" className="bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition">
+                          บันทึก
+                        </button>
+                        <button type="button" onClick={() => setEditingRoom(null)} className="bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-semibold px-4 py-2 rounded-lg transition">
+                          ยกเลิก
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h3 className="font-semibold text-gray-800">{r.RoomName}</h3>
+                          <div className="text-sm text-gray-500 mt-1">
+                            ความจุ: {r.Capacity} คน
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-medium px-3 py-1 rounded-full ${ROOM_STATUS[r.Status]?.color}`}>
+                            {ROOM_STATUS[r.Status]?.label}
+                          </span>
+                          <button onClick={() => startEdit(r)} className="text-xs text-primary-600 hover:text-primary-800 transition">
+                            แก้ไข
+                          </button>
+                          <button onClick={() => deleteRoom(r.RoomID)} className="text-xs text-red-500 hover:text-red-700 transition">
+                            ลบ
+                          </button>
+                        </div>
+                      </div>
+                      {r.bookings_today && r.bookings_today.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-gray-100">
+                          <div className="text-xs text-gray-500 mb-2">การจองวันนี้:</div>
+                          <div className="space-y-2">
+                            {r.bookings_today.map((b, idx) => (
+                              <div key={idx} className="flex items-center justify-between text-sm bg-gray-50 rounded-lg px-3 py-2">
+                                <span className="text-gray-700">{b.start} - {b.end}</span>
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS[b.status]?.color}`}>
+                                  {STATUS[b.status]?.label}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* ─── Tab: Users ─── */
+    function UsersTab() {
+      const [users, setUsers]     = useState([]);
+      const [form, setForm]       = useState({ name:'', email:'', role:'student', faculty:'', department:'' });
+      const [error, setError]     = useState('');
+      const [loading, setLoading] = useState(true);
+
+      useEffect(() => { loadUsers(); }, []);
+
+      async function loadUsers() {
+        try { setUsers(await apiFetch('/api/admin/users')); }
+        catch (e) { alert(e.message); }
+        finally { setLoading(false); }
+      }
+
+      async function createUser(e) {
+        e.preventDefault(); setError('');
+        try {
+          await apiFetch('/api/admin/users', { method: 'POST', body: form });
+          setForm({ name:'', email:'', role:'student', faculty:'', department:'' });
+          loadUsers();
+        } catch (err) { setError(err.message); }
+      }
+
+      async function deleteUser(id) {
+        if (!confirm('ลบผู้ใช้นี้?')) return;
+        try { await apiFetch(`/api/admin/users/${id}`, { method: 'DELETE' }); loadUsers(); }
+        catch (e) { alert(e.message); }
+      }
+
+      const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+      return (
+        <div className="space-y-6">
+          {/* ฟอร์มสร้างผู้ใช้ */}
+          <div className="bg-white rounded-xl border p-5">
+            <h3 className="font-semibold text-gray-700 mb-4">เพิ่มผู้ใช้ใหม่</h3>
+            {error && <div className="bg-red-50 text-red-700 text-sm rounded-lg px-4 py-2 mb-3">{error}</div>}
+            <form onSubmit={createUser} className="grid grid-cols-2 gap-3">
+              <input value={form.name} onChange={e => f('name', e.target.value)} placeholder="ชื่อ-นามสกุล" required
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+              <input value={form.email} onChange={e => f('email', e.target.value)} placeholder="อีเมล" type="email" required
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+              <select value={form.role} onChange={e => f('role', e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                <option value="student">นักศึกษา</option>
+                <option value="teacher">อาจารย์</option>
+                <option value="admin">Admin</option>
+              </select>
+              <input value={form.faculty} onChange={e => f('faculty', e.target.value)} placeholder="คณะ (ถ้ามี)"
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+              <div className="col-span-2">
+                <button type="submit"
+                  className="bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold px-5 py-2 rounded-lg transition">
+                  + เพิ่มผู้ใช้
+                </button>
+                <span className="text-xs text-gray-400 ml-3">รหัสผ่านเริ่มต้น = นามสกุล (ต้องเปลี่ยนเมื่อ Login ครั้งแรก)</span>
+              </div>
+            </form>
+          </div>
+
+          {/* ตารางผู้ใช้ */}
+          <div className="bg-white rounded-xl border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-600">
+                <tr>
+                  {['ชื่อ', 'อีเมล', 'สิทธิ์', 'สถานะรหัสผ่าน', ''].map(h => (
+                    <th key={h} className="text-left px-4 py-3 font-medium">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {loading ? (
+                  <tr><td colSpan="5" className="text-center py-8 text-gray-400">กำลังโหลด...</td></tr>
+                ) : users.map(u => (
+                  <tr key={u.UserID} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-medium">{u.Name}</td>
+                    <td className="px-4 py-3 text-gray-500">{u.Email}</td>
+                    <td className="px-4 py-3">
+                      <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">
+                        {u.Role}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {u.force_change_password
+                        ? <span className="text-xs text-orange-600">⚠️ ยังไม่เปลี่ยน</span>
+                        : <span className="text-xs text-green-600">✅ เปลี่ยนแล้ว</span>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <button onClick={() => deleteUser(u.UserID)}
+                        className="text-xs text-red-500 hover:text-red-700 transition">ลบ</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── Tab: Holidays ─── */
+    function HolidaysTab() {
+      const [holidays, setHolidays] = useState([]);
+      const [date, setDate]         = useState('');
+      const [desc, setDesc]         = useState('');
+
+      useEffect(() => { loadHolidays(); }, []);
+
+      async function loadHolidays() {
+        try { setHolidays(await apiFetch('/api/admin/holidays')); }
+        catch (e) { alert(e.message); }
+      }
+
+      async function addHoliday(e) {
+        e.preventDefault();
+        try { await apiFetch('/api/admin/holidays', { method: 'POST', body: { date, description: desc } }); setDate(''); setDesc(''); loadHolidays(); }
+        catch (err) { alert(err.message); }
+      }
+
+      async function del(id) {
+        if (!confirm('ลบวันหยุดนี้?')) return;
+        try { await apiFetch(`/api/admin/holidays/${id}`, { method: 'DELETE' }); loadHolidays(); }
+        catch (e) { alert(e.message); }
+      }
+
+      return (
+        <div className="space-y-6">
+          <div className="bg-white rounded-xl border p-5">
+            <h3 className="font-semibold text-gray-700 mb-4">เพิ่มวันหยุดพิเศษ</h3>
+            <form onSubmit={addHoliday} className="flex gap-3">
+              <input type="date" value={date} onChange={e => setDate(e.target.value)} required
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+              <input value={desc} onChange={e => setDesc(e.target.value)} placeholder="คำอธิบาย (เช่น วันหยุดนักขัตฤกษ์)"
+                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+              <button type="submit"
+                className="bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition">
+                + เพิ่ม
+              </button>
+            </form>
+          </div>
+
+          <div className="space-y-2">
+            {holidays.length === 0
+              ? <div className="text-center text-gray-400 py-8">ยังไม่มีวันหยุดพิเศษ</div>
+              : holidays.map(h => (
+                <div key={h.HolidayID} className="bg-white border rounded-xl px-5 py-3 flex items-center justify-between">
+                  <div>
+                    <span className="font-medium text-gray-800">
+                      {new Date(h.HolidayDate).toLocaleDateString('th-TH', { dateStyle: 'long' })}
+                    </span>
+                    {h.Description && <span className="text-sm text-gray-500 ml-2">— {h.Description}</span>}
+                  </div>
+                  <button onClick={() => del(h.HolidayID)}
+                    className="text-xs text-red-500 hover:text-red-700 transition">ลบ</button>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── Main ─── */
+    function AdminDashboard() {
+      const [user, setUser] = useState(null);
+      const [tab, setTab]   = useState('bookings');
+
+      useEffect(() => {
+        requireLogin(['admin']).then(u => { if (u) setUser(u); });
+      }, []);
+
+      if (!user) return <div className="text-center mt-20 text-gray-400">กำลังโหลด...</div>;
+
+      return (
+        <div>
+          <header role="banner">
+            <AdminNav user={user} tab={tab} setTab={setTab} />
+          </header>
+          <main id="main-content" role="main">
+            <div className="max-w-5xl mx-auto px-4 py-8">
+            {tab === 'bookings' && <BookingsTab />}
+            {tab === 'rooms'    && <RoomsTab />}
+            {tab === 'users'    && <UsersTab />}
+            {tab === 'holidays' && <HolidaysTab />}
+          </div>
+          </main>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<AdminDashboard />);
+  </script>
+</body>
+</html>

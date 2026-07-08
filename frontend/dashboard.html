@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — ระบบจองห้อง</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/styles/tailwind-config.js"></script>
+  <link rel="stylesheet" href="/styles/tokens.css">
+  <link rel="stylesheet" href="/styles/accessibility.css">
+  <link rel="stylesheet" href="/styles/responsive.css">
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="/assets/js/api.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary-600 text-white px-4 py-2 rounded-lg z-50">
+    ข้ามไปที่เนื้อหาหลัก
+  </a>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const STATUS_LABEL = {
+      pending:   { label: 'รออนุมัติ',  color: 'bg-yellow-100 text-yellow-800' },
+      approved:  { label: 'อนุมัติแล้ว', color: 'bg-green-100 text-green-800' },
+      rejected:  { label: 'ถูกปฏิเสธ',  color: 'bg-red-100 text-red-800' },
+      cancelled: { label: 'ยกเลิกแล้ว', color: 'bg-gray-100 text-gray-600' },
+    };
+
+    function Navbar({ user }) {
+      return (
+        <nav className="bg-white shadow-sm px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🎬</span>
+            <span className="font-bold text-gray-800">ระบบจองห้อง</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600">สวัสดี, {user?.name}</span>
+            <a href="/booking.html"
+              className="bg-primary-600 hover:bg-primary-700 text-white text-sm px-4 py-1.5 rounded-lg transition"
+              aria-label="จองห้องใหม่">
+              + จองห้อง
+            </a>
+            <button onClick={logout} className="text-sm text-gray-500 hover:text-red-500 transition" aria-label="ออกจากระบบ">
+              ออกจากระบบ
+            </button>
+          </div>
+        </nav>
+      );
+    }
+
+    function Dashboard() {
+      const [user, setUser]         = useState(null);
+      const [bookings, setBookings] = useState([]);
+      const [loading, setLoading]   = useState(true);
+
+      useEffect(() => {
+        requireLogin(['student', 'teacher']).then(u => {
+          if (!u) return;
+          setUser(u);
+          loadBookings();
+        });
+      }, []);
+
+      async function loadBookings() {
+        try {
+          const data = await apiFetch('/api/bookings');
+          setBookings(data);
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      async function cancelBooking(id) {
+        if (!confirm('ยืนยันการยกเลิกการจองนี้?')) return;
+        try {
+          await apiFetch(`/api/bookings/${id}/cancel`, { method: 'PATCH' });
+          loadBookings();
+        } catch (e) {
+          alert(e.message);
+        }
+      }
+
+      if (!user) return <div className="text-center mt-20 text-gray-400">กำลังโหลด...</div>;
+
+      return (
+        <div>
+          <header role="banner">
+            <Navbar user={user} />
+          </header>
+          <main id="main-content" role="main">
+            <div className="max-w-4xl mx-auto px-4 py-8">
+              <h2 className="text-xl font-bold text-gray-800 mb-6">การจองของฉัน</h2>
+
+            {loading ? (
+              <div className="text-center text-gray-400 py-12">กำลังโหลด...</div>
+            ) : bookings.length === 0 ? (
+              <div className="text-center py-16 bg-white rounded-xl border">
+                <div className="text-4xl mb-3">📋</div>
+                <p className="text-gray-500">ยังไม่มีประวัติการจอง</p>
+                <a href="/booking.html" className="inline-block mt-4 text-primary-600 hover:underline text-sm" aria-label="ไปยังหน้าจองห้อง">
+                  จองห้องตอนนี้ →
+                </a>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {bookings.map(b => {
+                  const s = STATUS_LABEL[b.Status] || {};
+                  const canCancel = ['pending', 'approved'].includes(b.Status);
+                  return (
+                    <div key={b.BookingID} className="bg-white rounded-xl border px-5 py-4 flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold text-gray-800">{b.RoomName}</div>
+                        <div className="text-sm text-gray-500 mt-0.5">
+                          {new Date(b.BookingDate).toLocaleDateString('th-TH', { dateStyle: 'long' })}
+                          {' · '}{b.StartTime}–{b.EndTime}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${s.color}`}>
+                          {s.label}
+                        </span>
+                        {canCancel && (
+                          <button onClick={() => cancelBooking(b.BookingID)}
+                            className="text-xs text-red-500 hover:text-red-700 border border-red-200 px-2.5 py-1 rounded-lg transition"
+                            aria-label="ยกเลิกการจอง">
+                            ยกเลิก
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          </main>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<Dashboard />);
+  </script>
+</body>
+</html>
