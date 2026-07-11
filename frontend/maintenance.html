@@ -8,7 +8,6 @@
   <script src="/styles/tailwind-config.js"></script>
   <link rel="stylesheet" href="/styles/tokens.css">
   <link rel="stylesheet" href="/styles/accessibility.css">
-  <link rel="stylesheet" href="/styles/responsive.css">
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -124,27 +123,27 @@
 
       return (
         <main id="main-content" role="main">
-          <div className="max-w-4xl mx-auto p-6">
-            <div className="flex justify-between items-center mb-6">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
               <h1 className="text-2xl font-bold text-gray-800">แจ้งซ่อมห้อง</h1>
               <button
                 onClick={() => window.location.href = '/dashboard.html'}
-                className="text-primary-600 hover:text-primary-800"
+                className="text-primary-600 hover:text-primary-800 text-sm"
                 aria-label="กลับไปหน้าแดชบอร์ด">
                 ← กลับหน้าหลัก
               </button>
             </div>
 
             {/* ฟอร์มแจ้งซ่อม */}
-            <div className="bg-white rounded-lg shadow p-6 mb-6">
+            <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-6">
               <h2 className="text-lg font-semibold mb-4">แจ้งปัญหาใหม่</h2>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4" aria-describedby="maintenance-error">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">ห้อง</label>
                   <select
                     value={roomId}
                     onChange={(e) => setRoomId(e.target.value)}
-                    className="w-full border rounded-lg px-3 py-2"
+                    className="w-full border rounded-lg px-3 py-2 text-sm sm:text-base"
                     required
                   >
                     <option value="">เลือกห้อง</option>
@@ -161,7 +160,7 @@
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    className="w-full border rounded-lg px-3 py-2"
+                    className="w-full border rounded-lg px-3 py-2 text-sm sm:text-base"
                     rows="4"
                     required
                   />
@@ -172,7 +171,7 @@
                   <select
                     value={urgency}
                     onChange={(e) => setUrgency(e.target.value)}
-                    className="w-full border rounded-lg px-3 py-2"
+                    className="w-full border rounded-lg px-3 py-2 text-sm sm:text-base"
                   >
                     <option value="low">ต่ำ</option>
                     <option value="normal">ปกติ</option>
@@ -181,13 +180,13 @@
                   </select>
                 </div>
 
-                {error && <div className="text-red-600 text-sm">{error}</div>}
+                {error && <div id="maintenance-error" className="text-red-600 text-sm" role="alert">{error}</div>}
                 {success && <div className="text-green-600 text-sm">{success}</div>}
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-primary-600 text-white py-2 rounded-lg hover:bg-primary-700 disabled:bg-gray-400"
+                  className="w-full bg-primary-600 text-white py-2 sm:py-3 rounded-lg hover:bg-primary-700 disabled:bg-gray-400 text-sm sm:text-base font-medium"
                 >
                   {loading ? 'กำลังส่ง...' : 'ส่งรายงาน'}
                 </button>
@@ -195,18 +194,18 @@
             </div>
 
             {/* ประวัติการแจ้งซ่อม */}
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white rounded-lg shadow p-4 sm:p-6">
               <h2 className="text-lg font-semibold mb-4">ประวัติการแจ้งซ่อมของคุณ</h2>
               {reports.length === 0 ? (
-                <p className="text-gray-500">ไม่มีรายงานการแจ้งซ่อม</p>
+                <p className="text-gray-500 text-sm sm:text-base">ไม่มีรายงานการแจ้งซ่อม</p>
               ) : (
                 <div className="space-y-3">
                   {reports.map((report) => (
-                    <div key={report.ReportID} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-start mb-2">
+                    <div key={report.ReportID} className="border rounded-lg p-3 sm:p-4">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-2">
                         <div>
-                          <h3 className="font-medium">{report.RoomName}</h3>
-                          <p className="text-sm text-gray-500">
+                          <h3 className="font-medium text-sm sm:text-base">{report.RoomName}</h3>
+                          <p className="text-xs sm:text-sm text-gray-500">
                             {new Date(report.ReportDate).toLocaleString('th-TH')}
                           </p>
                         </div>
@@ -214,9 +213,9 @@
                           {statusLabel[report.Status]}
                         </span>
                       </div>
-                      <p className="text-gray-700">{report.Description}</p>
+                      <p className="text-gray-700 text-sm sm:text-base">{report.Description}</p>
                       {report.Notes && (
-                        <p className="text-sm text-gray-500 mt-2">
+                        <p className="text-xs sm:text-sm text-gray-500 mt-2">
                           <strong>หมายเหตุ:</strong> {report.Notes}
                         </p>
                       )}
@@ -227,6 +226,7 @@
             </div>
           </div>
           </main>
+   
       );
     }
 

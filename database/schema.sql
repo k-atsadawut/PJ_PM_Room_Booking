@@ -53,6 +53,7 @@ CREATE TABLE bookings (
     StartTime   TIME                NOT NULL,
     EndTime     TIME                NOT NULL,
     Status      ENUM('pending','approved','rejected','cancelled') NOT NULL DEFAULT 'pending',
+    reminder_sent TINYINT(1)        NOT NULL DEFAULT 0,          -- FR-10/FR-13: กันแจ้งเตือนซ้ำ
     created_at  DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_booking_user FOREIGN KEY (UserID) REFERENCES users(UserID)
@@ -122,5 +123,23 @@ CREATE TABLE maintenance_reports (
     CONSTRAINT fk_report_room FOREIGN KEY (RoomID) REFERENCES rooms(RoomID)
         ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT fk_report_user FOREIGN KEY (UserID) REFERENCES users(UserID)
+        ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+-- ------------------------------------------------------------
+-- ตาราง Password Reset Requests (รองรับ Forgot Password)
+-- ------------------------------------------------------------
+CREATE TABLE password_reset_requests (
+    RequestID   INT AUTO_INCREMENT PRIMARY KEY,
+    UserID      INT             NOT NULL,
+    Email       VARCHAR(150)    NOT NULL,
+    Status      ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+    RequestDate DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ProcessedDate DATETIME      NULL,
+    ProcessedBy INT             NULL,
+    Notes       VARCHAR(255)    NULL,
+    CONSTRAINT fk_reset_user FOREIGN KEY (UserID) REFERENCES users(UserID)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_reset_admin FOREIGN KEY (ProcessedBy) REFERENCES users(UserID)
         ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB;

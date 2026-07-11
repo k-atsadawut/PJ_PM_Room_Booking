@@ -7,7 +7,7 @@ const router  = express.Router();
 // GET /api/admin/users
 router.get('/', requireAdmin, async (req, res) => {
   const [rows] = await db.execute(
-    'SELECT UserID, Name, Email, Role, Faculty, Department, force_change_password, created_at FROM users ORDER BY created_at DESC'
+    'SELECT UserID, Name, Email, Password, Role, Faculty, Department, force_change_password, created_at FROM users ORDER BY created_at DESC'
   );
   res.json(rows);
 });

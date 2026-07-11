@@ -36,10 +36,13 @@ app.use('/api/rooms',          require('./routes/rooms'));
 app.use('/api/bookings',       require('./routes/bookings'));
 app.use('/api/queues',         require('./routes/queues'));
 app.use('/api/maintenance',    require('./routes/maintenance'));
+app.use('/api/forgot-password', require('./routes/password-reset'));
+app.use('/api/holidays',       require('./routes/holidays'));
 app.use('/api/admin/users',    require('./routes/admin/users'));
 app.use('/api/admin/bookings', require('./routes/admin/bookings'));
 app.use('/api/admin/holidays', require('./routes/admin/holidays'));
 app.use('/api/admin/reports',  require('./routes/admin/reports'));
+app.use('/api/admin/password-requests', require('./routes/admin/password-requests'));
 
 // ─── Fallback — SPA-style redirect ────────────────────────────
 app.get('*', (req, res) => {

@@ -64,7 +64,7 @@ INSERT INTO bookings (UserID, RoomID, BookingDate, StartTime, EndTime, Status) V
 
 -- การจองที่ถูกยกเลิก
 INSERT INTO bookings (UserID, RoomID, BookingDate, StartTime, EndTime, Status) VALUES
-(8, 5, '2026-06-30', '13:00:00', '15:00:00', 'cancelled');
+(8, 4, '2026-06-30', '13:00:00', '15:00:00', 'cancelled');
 
 -- ------------------------------------------------------------
 -- Queues (คิวรอจอง)
@@ -86,8 +86,8 @@ INSERT INTO notifications (UserID, BookingID, Message, IsRead) VALUES
 -- Maintenance Reports (รายงานการแจ้งซ่อม)
 -- ------------------------------------------------------------
 INSERT INTO maintenance_reports (RoomID, UserID, Description, Status) VALUES
-(1, 2, 'ไมโครโฟนไม่ทำงาน', 'resolved'),
-(3, 4, 'หน้าจอมีจุดเสีย', 'open'),
+(1, 2, 'ไมโครโฟนไม่ทำงาน', 'completed'),
+(3, 4, 'หน้าจอมีจุดเสีย', 'pending'),
 (4, 5, 'แอร์ไม่เย็น', 'in_progress');
 
 -- ------------------------------------------------------------
