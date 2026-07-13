@@ -8,7 +8,12 @@ require('dotenv').config();
 //   DB_SSL_CA_PATH=/path/ca.pem → path ไฟล์ CA cert ที่ดาวน์โหลดจาก Aiven (แนะนำ)
 // ถ้าไม่ตั้ง DB_SSL เลย (เช่น รัน MySQL local) จะไม่ใช้ SSL เหมือนเดิม ไม่กระทบของเก่า
 function buildSslConfig() {
-  if (process.env.DB_SSL !== 'true') return undefined;
+  // Use TLS by default for remote databases (such as Aiven).  Local MySQL
+  // development can explicitly opt out with DB_SSL=false.
+  const isLocalHost = ['127.0.0.1', 'localhost', '::1'].includes(process.env.DB_HOST);
+  if (process.env.DB_SSL === 'false' || (process.env.DB_SSL !== 'true' && isLocalHost)) {
+    return undefined;
+  }
 
   if (process.env.DB_SSL_CA_PATH) {
     return {
@@ -17,9 +22,9 @@ function buildSslConfig() {
     };
   }
 
-  // fallback: เข้ารหัสอย่างเดียว ไม่ตรวจสอบ CA (ใช้ชั่วคราวตอน dev เท่านั้น
-  // ไม่แนะนำสำหรับ production เพราะเสี่ยง man-in-the-middle)
-  return { rejectUnauthorized: false };
+  // Aiven uses a publicly trusted certificate, so keep certificate validation
+  // enabled when a custom CA file is not configured.
+  return { rejectUnauthorized: true };
 }
 
 const pool = mysql.createPool({
@@ -27,7 +32,9 @@ const pool = mysql.createPool({
   port:     process.env.DB_PORT || 3306,
   database: process.env.DB_NAME || 'room_booking_system',
   user:     process.env.DB_USER || 'root',
-  password: process.env.DB_PASS || '',
+  // DB_PASSWORD is the standard name used by the project's environment files;
+  // retain DB_PASS for backward compatibility.
+  password: process.env.DB_PASSWORD || process.env.DB_PASS || '',
   charset:  'utf8mb4',
   waitForConnections: true,
   connectionLimit: 10,
