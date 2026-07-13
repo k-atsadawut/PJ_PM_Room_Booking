@@ -1,0 +1,19 @@
+{
+  "name": "room-booking-netlify",
+  "version": "1.0.0",
+  "description": "Digital Media Room Booking System — Netlify Functions + MySQL",
+  "main": "netlify/functions/index.js",
+  "scripts": {
+    "dev": "netlify dev",
+    "build": "echo 'No build step required'",
+    "deploy": "netlify deploy --prod"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "hono": "^4.0.0",
+    "mysql2": "^3.6.5"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.0.0"
+  }
+}
