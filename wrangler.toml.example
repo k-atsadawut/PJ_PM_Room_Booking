@@ -1,0 +1,62 @@
+name = "room-booking-system"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Environment variables (set these in wrangler.toml or use wrangler secret)
+# Use: wrangler secret put DATABASE_URL
+# Use: wrangler secret put DB_CA_CERT
+# Use: wrangler secret put SMTP_HOST
+# Use: wrangler secret put SMTP_PORT
+# Use: wrangler secret put SMTP_USER
+# Use: wrangler secret put SMTP_PASSWORD
+# Use: wrangler secret put SMTP_FROM
+
+# KV namespace for sessions (create with: wrangler kv namespace create SESSIONS)
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "YOUR_KV_NAMESPACE_ID"
+preview_id = "YOUR_PREVIEW_KV_NAMESPACE_ID"
+
+# D1 database (optional - if using D1 instead of external MySQL)
+# Create with: wrangler d1 create room-booking-db
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "room-booking-db"
+# database_id = "YOUR_D1_DATABASE_ID"
+
+# Hyperdrive configuration (for external MySQL/PostgreSQL)
+# Create with: wrangler hyperdrive create
+# [[hyperdrive]]
+# binding = "HYPERDRIVE"
+# id = "YOUR_HYPERDRIVE_ID"
+
+# Cron triggers for reminder scheduler
+[triggers]
+crons = ["*/5 * * * *"]  # Run every 5 minutes
+
+# Scheduled functions
+[[scheduled_functions]]
+name = "reminder"
+path = "src/scheduled/reminder.js"
+
+# Static assets for frontend
+[assets]
+directory = "./frontend"
+binding = "ASSETS"
+
+# Environment-specific settings
+[env.production]
+name = "room-booking-system-prod"
+
+[env.staging]
+name = "room-booking-system-staging"
+
+# Variables (non-sensitive)
+[vars]
+MAX_LOGIN_ATTEMPTS = "5"
+LOGIN_LOCK_MINUTES = "30"
+OPEN_TIME = "08:00"
+CLOSE_TIME = "20:00"
+REMINDER_MINUTES = "30"
+SESSION_LIFETIME = "21600000"

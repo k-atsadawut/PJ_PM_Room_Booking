@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard — ระบบจองห้อง</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/styles/tailwind-config.js"></script>
+  <link rel="stylesheet" href="/styles/tokens.css">
+  <link rel="stylesheet" href="/styles/accessibility.css">
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="/assets/js/api.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .card-hover:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+    .nav-active {
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      color: white;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary-600 text-white px-4 py-2 rounded-lg z-50">
+    ข้ามไปที่เนื้อหาหลัก
+  </a>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const STATUS = {
+      pending:   { label: 'รออนุมัติ',  color: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+      approved:  { label: 'อนุมัติแล้ว', color: 'bg-green-100 text-green-800 border-green-200' },
+      rejected:  { label: 'ถูกปฏิเสธ',  color: 'bg-red-100 text-red-800 border-red-200' },
+      cancelled: { label: 'ยกเลิกแล้ว', color: 'bg-gray-100 text-gray-600 border-gray-200' },
+    };
+
+    function AdminNav({ user, tab, setTab }) {
+      const [currentTime, setCurrentTime] = useState(new Date());
+      const [countdown, setCountdown] = useState({ hours: 0, minutes: 0, seconds: 0 });
+      
+      useEffect(() => {
+        const timer = setInterval(() => {
+          const now = new Date();
+          setCurrentTime(now);
+          
+          // Calculate countdown to next hour
+          const nextHour = new Date(now);
+          nextHour.setHours(now.getHours() + 1, 0, 0, 0);
+          const diff = nextHour - now;
+          const hours = Math.floor(diff / (1000 * 60 * 60));
+          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+          setCountdown({ hours, minutes, seconds });
+        }, 1000);
+        return () => clearInterval(timer);
+      }, []);
+
+      const links = [
+        { key: 'bookings', label: 'คำขอจอง', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg> },
+        { key: 'rooms',    label: 'ห้อง', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg> },
+        { key: 'users',    label: 'ผู้ใช้งาน', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg> },
+        { key: 'holidays', label: 'วันหยุด', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg> },
+        { key: 'password-requests', label: 'คำขอลืมรหัส', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg> },
+      ];
+      return (
+        <nav className="bg-white shadow-sm px-6 py-4">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <span className="font-bold text-gray-800">Admin Dashboard</span>
+                  <p className="text-xs text-gray-500">ระบบจองห้องผลิตสื่อดิจิทัล</p>
+                </div>
+              </div>
+              <div className="h-8 w-px bg-gray-200 hidden md:block"></div>
+              <div className="flex items-center gap-2">
+                {links.map(l => (
+                  <button key={l.key} onClick={() => setTab(l.key)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition ${tab === l.key ? 'nav-active' : 'text-gray-600 hover:bg-gray-100'}`}
+                    aria-label={`เปลี่ยนไปยังแท็บ${l.label}`}>
+                    {l.icon}
+                    {l.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="hidden lg:flex items-center gap-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl px-4 py-2 border border-blue-100">
+                <div className="text-center">
+                  <div className="text-xs text-gray-500">เวลาปัจจุบัน</div>
+                  <div className="text-sm font-bold text-gray-800">{currentTime.toLocaleTimeString('th-TH')}</div>
+                </div>
+                <div className="h-8 w-px bg-blue-200"></div>
+                <div className="text-center">
+                  <div className="text-xs text-gray-500">นับถอยหลัง</div>
+                  <div className="text-sm font-bold text-blue-600">
+                    {String(countdown.hours).padStart(2, '0')}:{String(countdown.minutes).padStart(2, '0')}:{String(countdown.seconds).padStart(2, '0')}
+                  </div>
+                </div>
+              </div>
+              <div className="text-right hidden sm:block">
+                <div className="text-sm font-medium text-gray-800">{user?.name}</div>
+                <div className="text-xs text-gray-500">Administrator</div>
+              </div>
+              <button onClick={logout} className="text-gray-500 hover:text-red-500 transition p-2" aria-label="ออกจากระบบ">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </nav>
+      );
+    }
+
+    /* ─── Tab: Bookings ─── */
+    function BookingsTab() {
+      const [bookings, setBookings] = useState([]);
+      const [rooms, setRooms]       = useState([]);
+      const [users, setUsers]       = useState([]);
+      const [loading, setLoading]   = useState(true);
+      const [filter, setFilter]     = useState('pending');
+
+      useEffect(() => { loadData(); }, []);
+
+      async function loadData() {
+        try {
+          const [bookingsData, roomsData, usersData] = await Promise.all([
+            apiFetch('/api/admin/bookings'),
+            apiFetch('/api/rooms'),
+            apiFetch('/api/admin/users')
+          ]);
+          setBookings(bookingsData);
+          setRooms(roomsData);
+          setUsers(usersData);
+        } catch (e) { alert(e.message); }
+        finally { setLoading(false); }
+      }
+
+      async function act(id, action) {
+        try {
+          await apiFetch(`/api/admin/bookings/${id}`, { method: 'PATCH', body: { action } });
+          loadData();
+        } catch (e) { alert(e.message); }
+      }
+
+      const filtered = bookings.filter(b => filter === 'all' || b.Status === filter);
+      
+      const stats = {
+        availableRooms: rooms.filter(r => r.Status === 'available').length,
+        pending: bookings.filter(b => b.Status === 'pending').length,
+        approvedToday: bookings.filter(b => b.Status === 'approved' && new Date(b.BookingDate).toDateString() === new Date().toDateString()).length,
+        blockedAccounts: users.filter(u => u.Blocked === 1).length,
+      };
+
+      return (
+        <div>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white rounded-2xl border p-5 card-hover transition-all duration-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">ห้องว่าง</p>
+                  <p className="text-2xl font-bold text-gray-800">{stats.availableRooms}</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-2xl border p-5 card-hover transition-all duration-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">รออนุมัติ</p>
+                  <p className="text-2xl font-bold text-gray-800">{stats.pending}</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-yellow-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-2xl border p-5 card-hover transition-all duration-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">อนุมัติวันนี้</p>
+                  <p className="text-2xl font-bold text-gray-800">{stats.approvedToday}</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-2xl border p-5 card-hover transition-all duration-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">บัญชีถูกบล็อก</p>
+                  <p className="text-2xl font-bold text-gray-800">{stats.blockedAccounts}</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Real-time Room Status */}
+          <div className="mb-6">
+            <h3 className="text-lg font-bold text-gray-800 mb-4">สถานะห้องแบบเรียลไทม์</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {rooms.slice(0, 4).map(room => {
+                const currentBooking = bookings.find(b => 
+                  b.Status === 'approved' && 
+                  b.RoomID === room.RoomID && 
+                  new Date(b.BookingDate).toDateString() === new Date().toDateString()
+                );
+                const statusConfig = {
+                  available: { 
+                    label: 'ว่าง', 
+                    bg: 'bg-green-100', 
+                    text: 'text-green-800',
+                    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  },
+                  booked: { 
+                    label: 'ไม่ว่าง', 
+                    bg: 'bg-red-100', 
+                    text: 'text-red-800',
+                    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  },
+                  maintenance: { 
+                    label: 'ปิดปรับปรุง', 
+                    bg: 'bg-yellow-100', 
+                    text: 'text-yellow-800',
+                    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                  }
+                };
+                const config = statusConfig[room.Status] || statusConfig.available;
+                
+                return (
+                  <div key={room.RoomID} className="bg-white rounded-2xl border p-4 card-hover transition-all duration-200">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h4 className="font-semibold text-gray-800 text-sm">{room.RoomName}</h4>
+                        <p className="text-xs text-gray-500 mt-1">ความจุ {room.Capacity} คน</p>
+                      </div>
+                      <div className={`px-2 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
+                        {config.label}
+                      </div>
+                    </div>
+                    
+                    {currentBooking && (
+                      <div className="bg-red-50 rounded-xl p-2 mb-2">
+                        <div className="flex items-center gap-2 text-xs text-red-700">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          <span className="font-medium">{currentBooking.UserName}</span>
+                        </div>
+                        <p className="text-xs text-red-600 mt-1">{currentBooking.StartTime}–{currentBooking.EndTime}</p>
+                      </div>
+                    )}
+                    
+                    {room.bookings_today?.length > 0 && !currentBooking && (
+                      <div className="space-y-1 mb-2">
+                        {room.bookings_today.slice(0, 2).map((bk, i) => (
+                          <div key={i} className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-2 py-1">
+                            <span className="text-gray-600">{bk.start} - {bk.end}</span>
+                            <span className={`px-1.5 py-0.5 rounded-full ${STATUS[bk.status]?.color}`}>
+                              {STATUS[bk.status]?.label}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Approval Queue */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-800">คิวอนุมัติ</h3>
+              <span className="text-sm text-gray-500">{bookings.filter(b => b.Status === 'pending').length} รายการรออนุมัติ</span>
+            </div>
+            <div className="bg-white rounded-2xl border overflow-hidden">
+              {bookings.filter(b => b.Status === 'pending').length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p>ไม่มีคำขอรออนุมัติ</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {bookings.filter(b => b.Status === 'pending').slice(0, 5).map(b => (
+                    <div key={b.BookingID} className="p-4 flex items-center justify-between hover:bg-gray-50">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                          <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-800">{b.UserName}</div>
+                          <div className="text-sm text-gray-500">{b.RoomName} · {new Date(b.BookingDate).toLocaleDateString('th-TH', { dateStyle: 'short' })} · {b.StartTime}–{b.EndTime}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => act(b.BookingID, 'approved')}
+                          className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition flex items-center gap-1"
+                          aria-label="อนุมัติการจอง">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                          อนุมัติ
+                        </button>
+                        <button onClick={() => act(b.BookingID, 'rejected')}
+                          className="bg-red-500 hover:bg-red-600 text-white text-sm font-medium px-4 py-2 rounded-xl transition flex items-center gap-1"
+                          aria-label="ปฏิเสธการจอง">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                          ปฏิเสธ
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Recent Notifications */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-800">การแจ้งเตือนล่าสุด</h3>
+              <span className="text-sm text-blue-600 hover:text-blue-700 cursor-pointer">ดูทั้งหมด</span>
+            </div>
+            <div className="bg-white rounded-2xl border overflow-hidden">
+              <div className="divide-y divide-gray-100">
+                {bookings.slice(0, 5).map(b => {
+                  const notificationType = b.Status === 'pending' ? 'new_request' : 
+                                         b.Status === 'approved' ? 'approved' : 
+                                         b.Status === 'rejected' ? 'rejected' : 'cancelled';
+                  const notificationConfig = {
+                    new_request: { 
+                      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
+                      bg: 'bg-blue-100',
+                      text: 'text-blue-600',
+                      label: 'คำขอใหม่'
+                    },
+                    approved: { 
+                      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>,
+                      bg: 'bg-green-100',
+                      text: 'text-green-600',
+                      label: 'อนุมัติแล้ว'
+                    },
+                    rejected: { 
+                      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>,
+                      bg: 'bg-red-100',
+                      text: 'text-red-600',
+                      label: 'ถูกปฏิเสธ'
+                    },
+                    cancelled: { 
+                      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>,
+                      bg: 'bg-gray-100',
+                      text: 'text-gray-600',
+                      label: 'ยกเลิกแล้ว'
+                    }
+                  };
+                  const config = notificationConfig[notificationType] || notificationConfig.new_request;
+                  
+                  return (
+                    <div key={b.BookingID} className="p-4 flex items-center gap-4 hover:bg-gray-50">
+                      <div className={`w-10 h-10 ${config.bg} rounded-xl flex items-center justify-center ${config.text}`}>
+                        {config.icon}
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm text-gray-800">
+                          <span className="font-medium">{b.UserName}</span> {config.label} สำหรับ {b.RoomName}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {new Date(b.BookingDate).toLocaleDateString('th-TH', { dateStyle: 'short' })} · {b.StartTime}–{b.EndTime}
+                        </div>
+                      </div>
+                      <span className="text-xs text-gray-400">{new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Usage Reports */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-800">รายงานการใช้งาน</h3>
+              <span className="text-sm text-blue-600 hover:text-blue-700 cursor-pointer">ดูรายละเอียด</span>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Most Used Rooms */}
+              <div className="bg-white rounded-2xl border p-4">
+                <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                  ห้องที่ใช้มากที่สุด
+                </h4>
+                <div className="space-y-2">
+                  {rooms.slice(0, 3).map((room, idx) => {
+                    const roomBookings = bookings.filter(b => b.RoomID === room.RoomID).length;
+                    const maxBookings = Math.max(...rooms.map(r => bookings.filter(b => b.RoomID === r.RoomID).length));
+                    const percentage = maxBookings > 0 ? (roomBookings / maxBookings) * 100 : 0;
+                    
+                    return (
+                      <div key={room.RoomID}>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-gray-700">{room.RoomName}</span>
+                          <span className="text-gray-500">{roomBookings} ครั้ง</span>
+                        </div>
+                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-blue-500 rounded-full transition-all duration-300" style={{ width: `${percentage}%` }}></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Frequent Users */}
+              <div className="bg-white rounded-2xl border p-4">
+                <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                  ผู้ใช้งานบ่อย
+                </h4>
+                <div className="space-y-2">
+                  {(() => {
+                    const userBookings = bookings.reduce((acc, b) => {
+                      acc[b.UserName] = (acc[b.UserName] || 0) + 1;
+                      return acc;
+                    }, {});
+                    const topUsers = Object.entries(userBookings).sort((a, b) => b[1] - a[1]).slice(0, 3);
+                    return topUsers.map(([userName, count]) => (
+                      <div key={userName} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 text-xs font-medium">
+                            {userName.charAt(0)}
+                          </div>
+                          <span className="text-sm text-gray-700">{userName}</span>
+                        </div>
+                        <span className="text-sm text-gray-500">{count} ครั้ง</span>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+
+              {/* Booking Trends */}
+              <div className="bg-white rounded-2xl border p-4">
+                <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
+                  แนวโน้มการจอง
+                </h4>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">สัปดาห์นี้</span>
+                    <span className="text-sm font-semibold text-green-600">+12%</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">เดือนนี้</span>
+                    <span className="text-sm font-semibold text-green-600">+8%</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">อัตราอนุมัติ</span>
+                    <span className="text-sm font-semibold text-blue-600">85%</span>
+                  </div>
+                  <div className="pt-2 border-t border-gray-100">
+                    <div className="text-xs text-gray-500 mb-1">การจองต่อวัน (เฉลี่ย)</div>
+                    <div className="text-lg font-bold text-gray-800">{Math.round(bookings.length / 7)}/วัน</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Security & System Status */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-800">สถานะความปลอดภัยและระบบ</h3>
+              <span className="text-sm text-blue-600 hover:text-blue-700 cursor-pointer">ดูรายละเอียด</span>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Security Status */}
+              <div className="bg-white rounded-2xl border p-4">
+                <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                  สถานะความปลอดภัย
+                </h4>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">บัญชีถูกบล็อก</span>
+                    <span className="text-sm font-semibold text-red-600">{stats.blockedAccounts}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">การเข้าสู่ระบบล้มเหลว</span>
+                    <span className="text-sm font-semibold text-yellow-600">3</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">ความพยายามเข้าสู่ระบบที่น่าสงสัย</span>
+                    <span className="text-sm font-semibold text-green-600">0</span>
+                  </div>
+                  <div className="pt-2 border-t border-gray-100">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-xs text-gray-500">ระบบความปลอดภัยทำงานปกติ</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* System Status */}
+              <div className="bg-white rounded-2xl border p-4">
+                <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" /></svg>
+                  สถานะระบบ
+                </h4>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">สถานะเซิร์ฟเวอร์</span>
+                    <span className="text-sm font-semibold text-green-600">ออนไลน์</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">ฐานข้อมูล</span>
+                    <span className="text-sm font-semibold text-green-600">เชื่อมต่อแล้ว</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">การสำรองข้อมูลล่าสุด</span>
+                    <span className="text-sm font-semibold text-blue-600">2 ชั่วโมงที่แล้ว</span>
+                  </div>
+                  <div className="pt-2 border-t border-gray-100">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-xs text-gray-500">ระบบทำงานปกติ</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Filter Tabs */}
+          <div className="flex gap-2 mb-4">
+            {['all','pending','approved','rejected','cancelled'].map(f => (
+              <button key={f} onClick={() => setFilter(f)}
+                className={`text-sm px-4 py-2 rounded-xl border transition font-medium
+                  ${filter === f ? 'nav-active border-transparent' : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'}`}
+                aria-label={`กรองสถานะ${f === 'all' ? 'ทั้งหมด' : STATUS[f]?.label}`}>
+                {f === 'all' ? 'ทั้งหมด' : STATUS[f]?.label}
+                {f !== 'all' && (
+                  <span className="ml-1">({bookings.filter(b => b.Status === f).length})</span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {loading ? (
+            <div className="text-center text-gray-400 py-12">กำลังโหลด...</div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-16 bg-white rounded-2xl border">
+              <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+              </div>
+              <p className="text-gray-500">ไม่มีรายการ</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl border overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="text-left px-6 py-3 text-sm font-semibold text-gray-600">ห้อง</th>
+                      <th className="text-left px-6 py-3 text-sm font-semibold text-gray-600 hidden sm:table-cell">วันที่</th>
+                      <th className="text-left px-6 py-3 text-sm font-semibold text-gray-600">เวลา</th>
+                      <th className="text-left px-6 py-3 text-sm font-semibold text-gray-600">ผู้จอง</th>
+                      <th className="text-left px-6 py-3 text-sm font-semibold text-gray-600">สถานะ</th>
+                      <th className="text-right px-6 py-3 text-sm font-semibold text-gray-600">จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {filtered.map(b => (
+                      <tr key={b.BookingID} className="hover:bg-gray-50">
+                        <td className="px-6 py-4">
+                          <div className="font-medium text-gray-800">{b.RoomName}</div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500 hidden sm:table-cell">
+                          {new Date(b.BookingDate).toLocaleDateString('th-TH', { dateStyle: 'medium' })}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {b.StartTime}–{b.EndTime}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-800">{b.UserName}</div>
+                          <div className="text-xs text-gray-500">{b.UserEmail}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`text-xs font-medium px-3 py-1 rounded-full border ${STATUS[b.Status]?.color}`}>
+                            {STATUS[b.Status]?.label}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          {b.Status === 'pending' && (
+                            <div className="flex items-center justify-end gap-2">
+                              <button onClick={() => act(b.BookingID, 'approved')}
+                                className="text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg transition font-medium"
+                                aria-label="อนุมัติการจอง">
+                                อนุมัติ
+                              </button>
+                              <button onClick={() => act(b.BookingID, 'rejected')}
+                                className="text-xs bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg transition font-medium"
+                                aria-label="ปฏิเสธการจอง">
+                                ปฏิเสธ
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* ─── Tab: Rooms ─── */
+    function RoomsTab() {
+      const [rooms, setRooms]     = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [editingRoom, setEditingRoom] = useState(null);
+      const [editForm, setEditForm] = useState({ RoomName: '', Capacity: '', Status: '' });
+      const [showAddForm, setShowAddForm] = useState(false);
+      const [addForm, setAddForm] = useState({ RoomName: '', Capacity: '', Status: 'available' });
+
+      useEffect(() => { loadRooms(); }, []);
+
+      async function loadRooms() {
+        try { setRooms(await apiFetch('/api/rooms')); }
+        catch (e) { alert(e.message); }
+        finally { setLoading(false); }
+      }
+
+      async function saveRoom(e) {
+        e.preventDefault();
+        try {
+          await apiFetch(`/api/rooms/${editingRoom.RoomID}`, {
+            method: 'PUT',
+            body: editForm
+          });
+          setEditingRoom(null);
+          loadRooms();
+        } catch (err) { alert(err.message); }
+      }
+
+      async function addRoom(e) {
+        e.preventDefault();
+        try {
+          await apiFetch('/api/rooms', {
+            method: 'POST',
+            body: addForm
+          });
+          setAddForm({ RoomName: '', Capacity: '', Status: 'available' });
+          setShowAddForm(false);
+          loadRooms();
+        } catch (err) { alert(err.message); }
+      }
+
+      async function deleteRoom(id) {
+        if (!confirm('ลบห้องนี้?')) return;
+        try {
+          await apiFetch(`/api/rooms/${id}`, { method: 'DELETE' });
+          loadRooms();
+        } catch (err) { alert(err.message); }
+      }
+
+      function startEdit(room) {
+        setEditingRoom(room);
+        setEditForm({
+          RoomName: room.RoomName,
+          Capacity: room.Capacity,
+          Status: room.Status
+        });
+      }
+
+      const ROOM_STATUS = {
+        available:   { label: 'ว่าง',      color: 'bg-green-100 text-green-800 border-green-200' },
+        booked:      { label: 'ไม่ว่าง',  color: 'bg-red-100 text-red-800 border-red-200' },
+        maintenance: { label: 'ซ่อมบำรุง', color: 'bg-orange-100 text-orange-800 border-orange-200' },
+      };
+
+      return (
+        <div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-4">
+            <h2 className="text-base sm:text-lg font-bold text-gray-800">จัดการห้อง</h2>
+            <button onClick={() => setShowAddForm(!showAddForm)} className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-2" aria-label="เปิด/ปิดฟอร์มเพิ่มห้อง">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+              เพิ่มห้อง
+            </button>
+          </div>
+
+          {showAddForm && (
+            <div className="bg-white rounded-2xl border p-4 sm:p-6 mb-4 sm:mb-6">
+              <h3 className="font-semibold text-gray-800 mb-4 text-sm sm:text-base">เพิ่มห้องใหม่</h3>
+              <form onSubmit={addRoom} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">ชื่อห้อง</label>
+                  <input
+                    value={addForm.RoomName}
+                    onChange={e => setAddForm({...addForm, RoomName: e.target.value})}
+                    className="w-full border border-gray-300 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">ความจุ (คน)</label>
+                  <input
+                    type="number"
+                    value={addForm.Capacity}
+                    onChange={e => setAddForm({...addForm, Capacity: parseInt(e.target.value)})}
+                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">สถานะ</label>
+                  <select
+                    value={addForm.Status}
+                    onChange={e => setAddForm({...addForm, Status: e.target.value})}
+                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="available">ว่าง</option>
+                    <option value="booked">ไม่ว่าง</option>
+                    <option value="maintenance">ซ่อมบำรุง</option>
+                  </select>
+                </div>
+                <div className="md:col-span-3 flex gap-2 mt-2">
+                  <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-6 py-2.5 rounded-xl transition" aria-label="บันทึกข้อมูลห้อง">
+                    บันทึก
+                  </button>
+                  <button type="button" onClick={() => setShowAddForm(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium px-6 py-2.5 rounded-xl transition" aria-label="ยกเลิกการเพิ่มห้อง">
+                    ยกเลิก
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="text-center text-gray-400 py-12">กำลังโหลด...</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {rooms.map(r => (
+                <div key={r.RoomID} className="bg-white rounded-2xl border p-5 card-hover transition-all duration-200">
+                  {editingRoom?.RoomID === r.RoomID ? (
+                    <form onSubmit={saveRoom} className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">ชื่อห้อง</label>
+                        <input
+                          value={editForm.RoomName}
+                          onChange={e => setEditForm({...editForm, RoomName: e.target.value})}
+                          className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">ความจุ (คน)</label>
+                        <input
+                          type="number"
+                          value={editForm.Capacity}
+                          onChange={e => setEditForm({...editForm, Capacity: parseInt(e.target.value)})}
+                          className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">สถานะ</label>
+                        <select
+                          value={editForm.Status}
+                          onChange={e => setEditForm({...editForm, Status: e.target.value})}
+                          className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="available">ว่าง</option>
+                          <option value="booked">ไม่ว่าง</option>
+                          <option value="maintenance">ซ่อมบำรุง</option>
+                        </select>
+                      </div>
+                      <div className="flex gap-2">
+                        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition" aria-label="บันทึกการแก้ไขห้อง">
+                          บันทึก
+                        </button>
+                        <button type="button" onClick={() => setEditingRoom(null)} className="bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium px-4 py-2 rounded-xl transition" aria-label="ยกเลิกการแก้ไขห้อง">
+                          ยกเลิก
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <>
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <h3 className="font-semibold text-gray-800">{r.RoomName}</h3>
+                          <div className="text-sm text-gray-500 mt-1">
+                            ความจุ: {r.Capacity} คน
+                          </div>
+                        </div>
+                        <span className={`text-xs font-medium px-3 py-1 rounded-full border ${ROOM_STATUS[r.Status]?.color}`}>
+                          {ROOM_STATUS[r.Status]?.label}
+                        </span>
+                      </div>
+                      {r.bookings_today && r.bookings_today.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-gray-100">
+                          <div className="text-xs text-gray-500 mb-2">การจองวันนี้:</div>
+                          <div className="space-y-2">
+                            {r.bookings_today.map((b, idx) => (
+                              <div key={idx} className="flex items-center justify-between text-sm bg-gray-50 rounded-lg px-3 py-2">
+                                <span className="text-gray-700">{b.start} - {b.end}</span>
+                                <span className={`text-xs px-2 py-0.5 rounded-full border ${STATUS[b.status]?.color}`}>
+                                  {STATUS[b.status]?.label}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100">
+                        <button onClick={() => startEdit(r)} className="text-sm text-blue-600 hover:text-blue-700 font-medium transition flex items-center gap-1" aria-label="แก้ไขข้อมูลห้อง">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                          แก้ไข
+                        </button>
+                        <button onClick={() => deleteRoom(r.RoomID)} className="text-sm text-red-600 hover:text-red-700 font-medium transition flex items-center gap-1" aria-label="ลบห้อง">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          ลบ
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* ─── Tab: Users ─── */
+    function UsersTab() {
+      const [users, setUsers]     = useState([]);
+      const [form, setForm]       = useState({ name:'', email:'', role:'student', faculty:'', department:'' });
+      const [error, setError]     = useState('');
+      const [loading, setLoading] = useState(true);
+
+      useEffect(() => { loadUsers(); }, []);
+
+      async function loadUsers() {
+        try { setUsers(await apiFetch('/api/admin/users')); }
+        catch (e) { alert(e.message); }
+        finally { setLoading(false); }
+      }
+
+      async function createUser(e) {
+        e.preventDefault(); setError('');
+        try {
+          await apiFetch('/api/admin/users', { method: 'POST', body: form });
+          setForm({ name:'', email:'', role:'student', faculty:'', department:'' });
+          loadUsers();
+        } catch (err) { setError(err.message); }
+      }
+
+      async function deleteUser(id) {
+        if (!confirm('ลบผู้ใช้นี้?')) return;
+        try { await apiFetch(`/api/admin/users/${id}`, { method: 'DELETE' }); loadUsers(); }
+        catch (e) { alert(e.message); }
+      }
+
+      const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+      return (
+        <div className="space-y-6">
+          {/* ฟอร์มสร้างผู้ใช้ */}
+          <div className="bg-white rounded-2xl border p-6">
+            <h3 className="font-semibold text-gray-800 mb-4">เพิ่มผู้ใช้ใหม่</h3>
+            {error && <div id="user-error" className="bg-red-50 text-red-700 text-sm rounded-lg px-4 py-3 mb-4 flex items-center gap-2" role="alert">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              {error}
+            </div>}
+            <form onSubmit={createUser} className="grid grid-cols-1 md:grid-cols-2 gap-4" aria-describedby="user-error">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">ชื่อ-นามสกุล</label>
+                <input value={form.name} onChange={e => f('name', e.target.value)} placeholder="ชื่อ-นามสกุล" required
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">อีเมล</label>
+                <input value={form.email} onChange={e => f('email', e.target.value)} placeholder="อีเมล" type="email" required
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">สิทธิ์</label>
+                <select value={form.role} onChange={e => f('role', e.target.value)}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  <option value="student">นักศึกษา</option>
+                  <option value="teacher">อาจารย์</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">คณะ (ถ้ามี)</label>
+                <input value={form.faculty} onChange={e => f('faculty', e.target.value)} placeholder="คณะ"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              </div>
+              <div className="md:col-span-2">
+                <button type="submit"
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-6 py-2.5 rounded-xl transition"
+                  aria-label="เพิ่มผู้ใช้ใหม่">
+                  + เพิ่มผู้ใช้
+                </button>
+                <span className="text-xs text-gray-400 ml-3">รหัสผ่านเริ่มต้น = นามสกุล (ต้องเปลี่ยนเมื่อ Login ครั้งแรก)</span>
+              </div>
+            </form>
+          </div>
+
+          {/* ตารางผู้ใช้ */}
+          <div className="bg-white rounded-2xl border overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    {['ชื่อ', 'อีเมล', 'สิทธิ์', 'รหัสผ่าน', 'สถานะรหัสผ่าน', ''].map(h => (
+                      <th key={h} className="text-left px-6 py-3 font-semibold text-gray-600">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {loading ? (
+                    <tr><td colSpan="6" className="text-center py-8 text-gray-400">กำลังโหลด...</td></tr>
+                  ) : users.map(u => (
+                    <tr key={u.UserID} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 font-medium text-gray-800">{u.Name}</td>
+                      <td className="px-6 py-4 text-gray-500">{u.Email}</td>
+                      <td className="px-6 py-4">
+                        <span className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full border border-blue-200 font-medium">
+                          {u.Role}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-xs font-mono bg-gray-100 text-gray-700 px-3 py-1 rounded-full border border-gray-200">
+                          {u.Password}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {u.force_change_password
+                          ? <span className="text-xs text-orange-600 font-medium">⚠️ ยังไม่เปลี่ยน</span>
+                          : <span className="text-xs text-green-600 font-medium">✅ เปลี่ยนแล้ว</span>}
+                      </td>
+                      <td className="px-6 py-4">
+                        <button onClick={() => deleteUser(u.UserID)}
+                          className="text-sm text-red-600 hover:text-red-700 font-medium transition">ลบ</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── Tab: Holidays ─── */
+    function HolidaysTab() {
+      const [holidays, setHolidays] = useState([]);
+      const [date, setDate]         = useState('');
+      const [desc, setDesc]         = useState('');
+
+      useEffect(() => { loadHolidays(); }, []);
+
+      async function loadHolidays() {
+        try { setHolidays(await apiFetch('/api/admin/holidays')); }
+        catch (e) { alert(e.message); }
+      }
+
+      async function addHoliday(e) {
+        e.preventDefault();
+        try { await apiFetch('/api/admin/holidays', { method: 'POST', body: { date, description: desc } }); setDate(''); setDesc(''); loadHolidays(); }
+        catch (err) { alert(err.message); }
+      }
+
+      async function del(id) {
+        if (!confirm('ลบวันหยุดนี้?')) return;
+        try { await apiFetch(`/api/admin/holidays/${id}`, { method: 'DELETE' }); loadHolidays(); }
+        catch (e) { alert(e.message); }
+      }
+
+      return (
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl border p-6">
+            <h3 className="font-semibold text-gray-800 mb-4">เพิ่มวันหยุดพิเศษ</h3>
+            <form onSubmit={addHoliday} className="flex gap-4">
+              <div className="flex-1">
+                <input type="date" value={date} onChange={e => setDate(e.target.value)} required
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              </div>
+              <div className="flex-2">
+                <input value={desc} onChange={e => setDesc(e.target.value)} placeholder="คำอธิบาย (เช่น วันหยุดนักขัตฤกษ์)"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              </div>
+              <button type="submit"
+                className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-6 py-2.5 rounded-xl transition">
+                + เพิ่ม
+              </button>
+            </form>
+          </div>
+
+          <div className="space-y-3">
+            {holidays.length === 0
+              ? <div className="text-center py-16 bg-white rounded-2xl border">
+                  <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                  </div>
+                  <p className="text-gray-500">ยังไม่มีวันหยุดพิเศษ</p>
+                </div>
+              : holidays.map(h => (
+                <div key={h.HolidayID} className="bg-white rounded-2xl border px-6 py-4 flex items-center justify-between card-hover transition-all duration-200">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-800">
+                        {new Date(h.HolidayDate).toLocaleDateString('th-TH', { dateStyle: 'long' })}
+                      </span>
+                      {h.Description && <span className="text-sm text-gray-500 ml-2">— {h.Description}</span>}
+                    </div>
+                  </div>
+                  <button onClick={() => del(h.HolidayID)}
+                    className="text-sm text-red-600 hover:text-red-700 font-medium transition">ลบ</button>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── Tab: Password Requests ─── */
+    function PasswordRequestsTab() {
+      const [requests, setRequests] = useState([]);
+      const [filter, setFilter] = useState('all');
+
+      useEffect(() => { loadRequests(); }, []);
+
+      async function loadRequests() {
+        try { setRequests(await apiFetch('/api/admin/password-requests')); }
+        catch (e) { alert(e.message); }
+      }
+
+      async function handleAction(id, action, notes) {
+        if (!confirm(`ยืนยันการ${action === 'approved' ? 'อนุมัติ' : 'ปฏิเสธ'}คำขอนี้?`)) return;
+        try {
+          await apiFetch(`/api/admin/password-requests/${id}`, {
+            method: 'PATCH',
+            body: { action, notes }
+          });
+          loadRequests();
+        } catch (e) { alert(e.message); }
+      }
+
+      const filtered = filter === 'all' ? requests : requests.filter(r => r.Status === filter);
+      const STATUS = {
+        pending: { label: 'รอดำเนินการ', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+        approved: { label: 'อนุมัติแล้ว', color: 'bg-green-100 text-green-800 border-green-200' },
+        rejected: { label: 'ปฏิเสธ', color: 'bg-red-100 text-red-800 border-red-200' },
+      };
+
+      return (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <h2 className="text-xl font-bold text-gray-800">คำขอลืมรหัสผ่าน</h2>
+            <div className="flex gap-2">
+              {['all','pending','approved','rejected'].map(f => (
+                <button key={f} onClick={() => setFilter(f)}
+                  className={`text-sm px-4 py-2 rounded-xl border transition font-medium
+                    ${filter === f ? 'nav-active border-transparent' : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'}`}
+                  aria-label={`กรองสถานะ${f === 'all' ? 'ทั้งหมด' : STATUS[f]?.label}`}>
+                  {f === 'all' ? 'ทั้งหมด' : STATUS[f]?.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {filtered.length === 0 ? (
+            <div className="text-center py-16 bg-white rounded-2xl border">
+              <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+              </div>
+              <p className="text-gray-500">ไม่มีคำขอลืมรหัสผ่าน</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filtered.map(r => (
+                <div key={r.RequestID} className="bg-white rounded-2xl border px-6 py-4 card-hover transition-all duration-200">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className={`text-xs font-medium px-3 py-1 rounded-full border ${STATUS[r.Status]?.color}`}>
+                          {STATUS[r.Status]?.label}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {new Date(r.RequestDate).toLocaleString('th-TH')}
+                        </span>
+                      </div>
+                      <div className="font-semibold text-gray-800">{r.UserName}</div>
+                      <div className="text-sm text-gray-600">{r.Email}</div>
+                      {r.UserPassword && (
+                        <div className="text-sm text-gray-500 mt-1">
+                          <span className="font-medium">รหัสผ่านปัจจุบัน:</span> {r.UserPassword}
+                        </div>
+                      )}
+                      {r.Notes && (
+                        <div className="text-sm text-gray-500 mt-1">
+                          <span className="font-medium">หมายเหตุ:</span> {r.Notes}
+                        </div>
+                      )}
+                      {r.ProcessedDate && (
+                        <div className="text-xs text-gray-400 mt-1">
+                          ดำเนินการเมื่อ {new Date(r.ProcessedDate).toLocaleString('th-TH')}
+                          {r.AdminName && ` โดย ${r.AdminName}`}
+                        </div>
+                      )}
+                    </div>
+                    {r.Status === 'pending' && (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleAction(r.RequestID, 'approved')}
+                          className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition"
+                          aria-label="อนุมัติคำขอลืมรหัสผ่าน">
+                          อนุมัติ
+                        </button>
+                        <button
+                          onClick={() => {
+                            const notes = prompt('เหตุผลในการปฏิเสธ (ถ้ามี):');
+                            if (notes !== null) handleAction(r.RequestID, 'rejected', notes);
+                          }}
+                          className="bg-red-500 hover:bg-red-600 text-white text-sm font-medium px-4 py-2 rounded-xl transition"
+                          aria-label="ปฏิเสธคำขอลืมรหัสผ่าน">
+                          ปฏิเสธ
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* ─── Main ─── */
+    function AdminDashboard() {
+      const [user, setUser] = useState(null);
+      const [tab, setTab]   = useState('bookings');
+
+      useEffect(() => {
+        requireLogin(['admin']).then(u => { if (u) setUser(u); });
+      }, []);
+
+      if (!user) return <div className="text-center mt-20 text-gray-400">กำลังโหลด...</div>;
+
+      return (
+        <div>
+          <header role="banner">
+            <AdminNav user={user} tab={tab} setTab={setTab} />
+          </header>
+          <main id="main-content" role="main" className="max-w-7xl mx-auto px-4 py-8">
+            {tab === 'bookings' && <BookingsTab />}
+            {tab === 'rooms'    && <RoomsTab />}
+            {tab === 'users'    && <UsersTab />}
+            {tab === 'holidays' && <HolidaysTab />}
+            {tab === 'password-requests' && <PasswordRequestsTab />}
+          </main>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<AdminDashboard />);
+  </script>
+</body>
+</html>

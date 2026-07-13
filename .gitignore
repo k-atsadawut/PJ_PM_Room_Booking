@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.dev.vars
+
+# Cloudflare Workers configuration (contains credentials)
+wrangler.toml
+.wrangler/
+
+# Build outputs
+dist/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local Netlify folder
+.netlify
+
+# Aiven CA certificate (contains sensitive info)
+aiven-ca.pem
