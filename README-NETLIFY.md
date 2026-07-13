@@ -121,12 +121,15 @@ Go to your Netlify site dashboard → **Site settings** → **Environment variab
 - `DATABASE_URL` (or `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`)
 - `DB_CA_CERT` - Aiven CA certificate (multi-line value)
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`
-- Any other variables from `.env.example`
+- `MAX_LOGIN_ATTEMPTS`, `LOGIN_LOCK_MINUTES`
+- `OPEN_TIME`, `CLOSE_TIME`, `REMINDER_MINUTES`
 
 **Setting DB_CA_CERT in Netlify:**
 1. Download CA certificate from Aiven Console
 2. Open the file and copy the entire content (including `-----BEGIN CERTIFICATE-----` and `-----END CERTIFICATE-----`)
 3. Paste it as the value for `DB_CA_CERT` in Netlify (supports multi-line)
+
+**Note:** Node.js version is set to 20 in `netlify.toml` - no need to configure manually.
 
 ### 7. Configure Scheduled Functions
 
