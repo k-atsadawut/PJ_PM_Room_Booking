@@ -39,6 +39,13 @@ Update the following variables:
 # Database (use either DATABASE_URL or individual params)
 DATABASE_URL=mysql://avnadmin:YOUR_PASSWORD@room-booking-mysql-roombooking21.g.aivencloud.com:14255/defaultdb?sslMode=REQUIRED
 
+# Aiven CA Certificate (required for SSL connection)
+# Download from Aiven Console → Service → Overview → CA Certificate
+# Copy the entire content (including BEGIN/END CERTIFICATE) and paste as a multi-line value
+DB_CA_CERT=-----BEGIN CERTIFICATE-----
+...paste your CA certificate content here...
+-----END CERTIFICATE-----
+
 # Email Configuration
 SMTP_HOST=smtp.example.com
 SMTP_PORT=587
@@ -46,6 +53,12 @@ SMTP_USER=your-email@example.com
 SMTP_PASSWORD=your-email-password
 SMTP_FROM=noreply@roombooking.system
 ```
+
+**Important for Aiven MySQL:**
+- Aiven requires SSL/TLS connections
+- Download the CA certificate from Aiven Console
+- Set `DB_CA_CERT` with the full certificate content (multi-line)
+- Connection limit is set to 5 for serverless optimization
 
 ### 3. Create Sessions Table
 
@@ -106,8 +119,14 @@ npm run deploy
 Go to your Netlify site dashboard → **Site settings** → **Environment variables** and add:
 
 - `DATABASE_URL` (or `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`)
+- `DB_CA_CERT` - Aiven CA certificate (multi-line value)
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`
 - Any other variables from `.env.example`
+
+**Setting DB_CA_CERT in Netlify:**
+1. Download CA certificate from Aiven Console
+2. Open the file and copy the entire content (including `-----BEGIN CERTIFICATE-----` and `-----END CERTIFICATE-----`)
+3. Paste it as the value for `DB_CA_CERT` in Netlify (supports multi-line)
 
 ### 7. Configure Scheduled Functions
 
