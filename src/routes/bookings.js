@@ -3,7 +3,7 @@ import { requireAuth } from '../middleware/auth';
 import { hasExistingBookingForDate } from '../utils/bookingRules';
 import { notifyAdminNewBooking } from '../utils/mailer';
 import { checkAndNotifyQueue } from './queues';
-import { executeQuery, query } from '../config/db';
+import { executeQuery } from '../config/db';
 
 const bookings = new Hono();
 
