@@ -10,8 +10,8 @@ export function getDb() {
     const connectionString = process.env.DATABASE_URL ||
       `mysql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT || 3306}/${process.env.DB_NAME}`;
 
-    // Load Aiven CA certificate for secure SSL connection
-    let sslConfig = { rejectUnauthorized: false };
+    // TiDB and Aiven expose TLS endpoints. Keep certificate validation on.
+    let sslConfig = { rejectUnauthorized: true };
 
     if (process.env.DB_CA_CERT) {
       sslConfig = {
