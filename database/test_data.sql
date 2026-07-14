@@ -2,20 +2,18 @@
 -- ข้อมูลทดสอบ / Test Data for Room Booking System
 -- ============================================================
 
-USE room_booking_system;
-
 -- ------------------------------------------------------------
--- Users (รหัสผ่านทั้งหมดคือ "password123" - plain text)
+-- Users (รหัสผ่านทั้งหมดคือ "password123" - SHA-256 hash)
 -- ------------------------------------------------------------
 INSERT INTO users (Name, Email, Password, Role, Faculty, Department, force_change_password) VALUES
-('Admin User', 'admin@university.ac.th', '$2a$10$mU92vgQJvl8cfu/AfLO0Pe/86S92udOB7ibTy8A/4erciurJeKfdO', 'admin', 'IT', 'Computer Science', 0),
-('Teacher Somchai', 'teacher1@university.ac.th', '$2a$10$mU92vgQJvl8cfu/AfLO0Pe/86S92udOB7ibTy8A/4erciurJeKfdO', 'teacher', 'Engineering', 'Electrical', 0),
-('Teacher Suda', 'teacher2@university.ac.th', '$2a$10$mU92vgQJvl8cfu/AfLO0Pe/86S92udOB7ibTy8A/4erciurJeKfdO', 'teacher', 'Business', 'Marketing', 0),
-('Student Nop', 'student1@university.ac.th', '$2a$10$mU92vgQJvl8cfu/AfLO0Pe/86S92udOB7ibTy8A/4erciurJeKfdO', 'student', 'Engineering', 'Computer Engineering', 1),
-('Student Mali', 'student2@university.ac.th', '$2a$10$mU92vgQJvl8cfu/AfLO0Pe/86S92udOB7ibTy8A/4erciurJeKfdO', 'student', 'Business', 'Accounting', 1),
-('Student Som', 'student3@university.ac.th', '$2a$10$mU92vgQJvl8cfu/AfLO0Pe/86S92udOB7ibTy8A/4erciurJeKfdO', 'student', 'Arts', 'Design', 1),
-('Student Dang', 'student4@university.ac.th', '$2a$10$mU92vgQJvl8cfu/AfLO0Pe/86S92udOB7ibTy8A/4erciurJeKfdO', 'student', 'Science', 'Physics', 1),
-('Student Nam', 'student5@university.ac.th', '$2a$10$mU92vgQJvl8cfu/AfLO0Pe/86S92udOB7ibTy8A/4erciurJeKfdO', 'student', 'IT', 'Information Technology', 1);
+('Admin User', 'admin@university.ac.th', 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f', 'admin', 'IT', 'Computer Science', 0),
+('Teacher Somchai', 'teacher1@university.ac.th', 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f', 'teacher', 'Engineering', 'Electrical', 0),
+('Teacher Suda', 'teacher2@university.ac.th', 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f', 'teacher', 'Business', 'Marketing', 0),
+('Student Nop', 'student1@university.ac.th', 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f', 'student', 'Engineering', 'Computer Engineering', 1),
+('Student Mali', 'student2@university.ac.th', 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f', 'student', 'Business', 'Accounting', 1),
+('Student Som', 'student3@university.ac.th', 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f', 'student', 'Arts', 'Design', 1),
+('Student Dang', 'student4@university.ac.th', 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f', 'student', 'Science', 'Physics', 1),
+('Student Nam', 'student5@university.ac.th', 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f', 'student', 'IT', 'Information Technology', 1);
 
 -- ------------------------------------------------------------
 -- Rooms

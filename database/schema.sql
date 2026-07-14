@@ -4,11 +4,6 @@
 -- อ้างอิงจาก Data Dictionary ใน SRS_v2 + Roadmap Phase 1-4
 -- ============================================================
 
-CREATE DATABASE IF NOT EXISTS room_booking_system
-  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
-USE room_booking_system;
-
 -- ------------------------------------------------------------
 -- ตาราง User
 -- หมายเหตุ: BR-11 ระบุว่ารหัสผ่าน = นามสกุล (ความเสี่ยงสูง)

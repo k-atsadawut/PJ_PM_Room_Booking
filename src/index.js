@@ -12,6 +12,7 @@ import adminBookingRoutes from './routes/admin/bookings';
 import adminHolidayRoutes from './routes/admin/holidays';
 import adminReportRoutes from './routes/admin/reports';
 import adminPasswordRequestsRoutes from './routes/admin/password-requests';
+import { scheduled } from './scheduled/reminder';
 
 const app = new Hono();
 
@@ -43,11 +44,9 @@ app.get('*', async (c) => {
 // Cloudflare Workers handler
 export default {
   async fetch(request, env, ctx) {
-    // Bind environment variables to context
-    const context = {
-      env,
-      ctx
-    };
-    return app.fetch(request, context);
+    return app.fetch(request, env, ctx);
+  },
+  async scheduled(event, env, ctx) {
+    return scheduled(event, env, ctx);
   }
 };

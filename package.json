@@ -15,7 +15,6 @@
     "hyperdrive": "wrangler hyperdrive"
   },
   "dependencies": {
-    "bcryptjs": "^2.4.3",
     "hono": "^4.0.0",
     "mysql2": "^3.6.5"
   },
