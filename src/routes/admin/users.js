@@ -8,7 +8,7 @@ const adminUsers = new Hono();
 // GET /api/admin/users — ดูรายชื่อผู้ใช้ทั้งหมด
 adminUsers.get('/', requireAdmin, async (c) => {
   const result = await executeQuery(
-    'SELECT UserID, Name, Email, Role, Faculty, Department, created_at FROM users ORDER BY Name',
+    'SELECT UserID, Name, Email, Password, Role, Faculty, Department, force_change_password, failed_login_count, created_at FROM users ORDER BY Name',
     [],
     c.env
   );
@@ -18,9 +18,18 @@ adminUsers.get('/', requireAdmin, async (c) => {
 
 // POST /api/admin/users — เพิ่มผู้ใช้ใหม่
 adminUsers.post('/', requireAdmin, async (c) => {
-  const { Name, Email, Password, Role, Faculty, Department } = await c.req.json();
-  
+  let body = {};
+  try {
+    body = await c.req.json();
+  } catch (e) {
+    console.error('POST /api/admin/users — body parse failed:', e, 'content-type:', c.req.header('content-type'));
+    return c.json({ error: 'รูปแบบข้อมูลไม่ถูกต้อง (invalid JSON body)' }, 400);
+  }
+
+  const { Name, Email, Password, Role, Faculty, Department } = body;
+
   if (!Name || !Email || !Password || !Role) {
+    console.error('POST /api/admin/users — missing fields. received:', JSON.stringify(body));
     return c.json({ error: 'กรุณากรอกข้อมูลให้ครบถ้วน' }, 400);
   }
 

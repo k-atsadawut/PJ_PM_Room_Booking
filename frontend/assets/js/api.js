@@ -32,7 +32,7 @@ async function requireLogin(allowedRoles = []) {
   }
 }
 
-async function logout() {
+window.logout = async function() {
   await apiFetch('/api/auth/logout', { method: 'POST' });
   location.href = '/login.html';
-}
+};

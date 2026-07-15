@@ -10,6 +10,38 @@ const bookings = new Hono();
 const OPEN_TIME = '08:30';
 const CLOSE_TIME = '17:00';
 
+// Helper function to get next available day (not holiday, not weekend)
+async function getNextAvailableDay(startDate, env) {
+  let currentDate = new Date(startDate);
+  currentDate.setDate(currentDate.getDate() + 1); // Start checking from tomorrow
+  
+  for (let i = 0; i < 7; i++) { // Check up to 7 days ahead
+    const dateStr = currentDate.toISOString().split('T')[0];
+    const dow = currentDate.getDay();
+    
+    // Skip weekends
+    if (dow === 0 || dow === 6) {
+      currentDate.setDate(currentDate.getDate() + 1);
+      continue;
+    }
+    
+    // Check if it's a holiday
+    const holiday = await executeQuery(
+      'SELECT HolidayID FROM holidays WHERE HolidayDate = ? LIMIT 1',
+      [dateStr],
+      env
+    );
+    
+    if (holiday.length === 0) {
+      return dateStr; // Found available day
+    }
+    
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  
+  return startDate; // Fallback to original date if no available day found
+}
+
 // GET /api/bookings — ดูการจองของตัวเอง
 bookings.get('/', requireAuth, async (c) => {
   const session = c.get('session');
@@ -44,16 +76,31 @@ bookings.post('/', requireAuth, async (c) => {
     return c.json({ error: 'จองได้เฉพาะช่วง 08:30–17:00 น. (FR-05)' }, 400);
   }
 
-  // FR-02: จองได้เฉพาะวันปัจจุบัน
+  // FR-02: จองได้เฉพาะวันปัจจุบัน หรือวันถัดไปถ้าวันนี้เป็นวันหยุด
   const today = new Date().toISOString().split('T')[0];
-  if (date !== today) {
-    return c.json({ error: 'จองได้เฉพาะวันปัจจุบันเท่านั้น (FR-02)' }, 400);
+  const todayHoliday = await executeQuery(
+    'SELECT HolidayID FROM holidays WHERE HolidayDate = ? LIMIT 1',
+    [today],
+    c.env
+  );
+  
+  const isTodayHoliday = todayHoliday.length > 0;
+  const allowedDate = isTodayHoliday ? getNextAvailableDay(today, c.env) : today;
+  
+  if (date !== allowedDate) {
+    if (isTodayHoliday) {
+      return c.json({ error: `วันนี้เป็นวันหยุด สามารถจองได้เฉพาะวันที่ ${allowedDate} เท่านั้น` }, 400);
+    } else {
+      return c.json({ error: 'จองได้เฉพาะวันปัจจุบันเท่านั้น (FR-02)' }, 400);
+    }
   }
 
-  // FR-05: เลยเวลาปิดแล้ว
-  const nowTime = new Date().toTimeString().slice(0, 5);
-  if (nowTime >= CLOSE_TIME) {
-    return c.json({ error: 'หมดเวลาจองสำหรับวันนี้แล้ว (FR-05)' }, 400);
+  // FR-05: เลยเวลาปิดแล้ว (ตรวจเฉพาะถ้าจองวันนี้)
+  if (!isTodayHoliday) {
+    const nowTime = new Date().toTimeString().slice(0, 5);
+    if (nowTime >= CLOSE_TIME) {
+      return c.json({ error: 'หมดเวลาจองสำหรับวันนี้แล้ว (FR-05)' }, 400);
+    }
   }
 
   // FR-06: เสาร์-อาทิตย์
@@ -99,15 +146,21 @@ bookings.post('/', requireAuth, async (c) => {
     return c.json({ error: 'คุณมีคำขอจองในวันที่เลือกแล้ว ไม่สามารถจองเพิ่มได้ในวันเดียวกัน (BR-06)' }, 400);
   }
 
-  // สร้างการจอง
+  // สร้างการจอง - ถ้าไม่มี conflict ให้อนุมัติทันที
+  const status = 'approved'; // Instant approval when no conflict
   const result = await executeQuery(`
     INSERT INTO bookings (UserID, RoomID, BookingDate, StartTime, EndTime, Status)
-    VALUES (?, ?, ?, ?, ?, 'pending')
-  `, [session.user.id, roomId, date, start, end], c.env);
+    VALUES (?, ?, ?, ?, ?, ?)
+  `, [session.user.id, roomId, date, start, end, status], c.env);
 
   const bookingId = result.insertId;
 
-  // FR-09: แจ้ง Admin (notification ในระบบ)
+  // ถ้าอนุมัติทันที ไม่ต้องแจ้ง Admin
+  if (status === 'approved') {
+    return c.json({ success: true, bookingId, instantApproval: true });
+  }
+
+  // FR-09: แจ้ง Admin (notification ในระบบ) - สำหรับกรณีที่ต้องอนุมัติ
   const admins = await executeQuery("SELECT UserID, Email FROM users WHERE Role = 'admin'", [], c.env);
   const room = await executeQuery("SELECT RoomName FROM rooms WHERE RoomID = ?", [roomId], c.env);
   const roomName = room[0]?.RoomName || roomId;

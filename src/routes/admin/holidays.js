@@ -23,13 +23,25 @@ adminHolidays.post('/', requireAdmin, async (c) => {
     return c.json({ error: 'กรุณาระบุวันที่' }, 400);
   }
 
-  const result = await executeQuery(
-    'INSERT INTO holidays (HolidayDate, Description) VALUES (?, ?)',
-    [HolidayDate, Description || null],
-    c.env
-  );
+  try {
+    const result = await executeQuery(
+      'INSERT INTO holidays (HolidayDate, Description) VALUES (?, ?)',
+      [HolidayDate, Description || null],
+      c.env
+    );
 
-  return c.json({ success: true, holidayId: result.insertId });
+    // Verify the insert by fetching the newly created holiday
+    const verifyResult = await executeQuery(
+      'SELECT * FROM holidays WHERE HolidayID = ?',
+      [result.insertId],
+      c.env
+    );
+
+    return c.json({ success: true, holidayId: result.insertId, holiday: verifyResult[0] });
+  } catch (error) {
+    console.error('Error inserting holiday:', error);
+    return c.json({ error: 'ไม่สามารถเพิ่มวันหยุดได้: ' + error.message }, 500);
+  }
 });
 
 // DELETE /api/admin/holidays/:id — ลบวันหยุด

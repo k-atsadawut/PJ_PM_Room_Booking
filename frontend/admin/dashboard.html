@@ -44,6 +44,7 @@
     function AdminNav({ user, tab, setTab }) {
       const [currentTime, setCurrentTime] = useState(new Date());
       const [countdown, setCountdown] = useState({ hours: 0, minutes: 0, seconds: 0 });
+      const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
       
       useEffect(() => {
         const timer = setInterval(() => {
@@ -70,9 +71,9 @@
         { key: 'password-requests', label: 'คำขอลืมรหัส', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg> },
       ];
       return (
-        <nav className="bg-white shadow-sm px-6 py-4">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-6">
+        <nav className="bg-white shadow-sm px-4 sm:px-6 py-4">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -81,11 +82,12 @@
                 </div>
                 <div>
                   <span className="font-bold text-gray-800">Admin Dashboard</span>
-                  <p className="text-xs text-gray-500">ระบบจองห้องผลิตสื่อดิจิทัล</p>
+                  <p className="text-xs text-gray-500 hidden sm:block">ระบบจองห้องผลิตสื่อดิจิทัล</p>
                 </div>
               </div>
-              <div className="h-8 w-px bg-gray-200 hidden md:block"></div>
-              <div className="flex items-center gap-2">
+              
+              {/* Desktop Navigation */}
+              <div className="hidden md:flex items-center gap-2">
                 {links.map(l => (
                   <button key={l.key} onClick={() => setTab(l.key)}
                     className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition ${tab === l.key ? 'nav-active' : 'text-gray-600 hover:bg-gray-100'}`}
@@ -95,31 +97,64 @@
                   </button>
                 ))}
               </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="hidden lg:flex items-center gap-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl px-4 py-2 border border-blue-100">
-                <div className="text-center">
-                  <div className="text-xs text-gray-500">เวลาปัจจุบัน</div>
-                  <div className="text-sm font-bold text-gray-800">{currentTime.toLocaleTimeString('th-TH')}</div>
-                </div>
-                <div className="h-8 w-px bg-blue-200"></div>
-                <div className="text-center">
-                  <div className="text-xs text-gray-500">นับถอยหลัง</div>
-                  <div className="text-sm font-bold text-blue-600">
-                    {String(countdown.hours).padStart(2, '0')}:{String(countdown.minutes).padStart(2, '0')}:{String(countdown.seconds).padStart(2, '0')}
+
+              {/* Time and User Info - Desktop */}
+              <div className="hidden md:flex items-center gap-4">
+                <div className="hidden lg:flex items-center gap-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl px-4 py-2 border border-blue-100">
+                  <div className="text-center">
+                    <div className="text-xs text-gray-500">เวลาปัจจุบัน</div>
+                    <div className="text-sm font-bold text-gray-800">{currentTime.toLocaleTimeString('th-TH')}</div>
+                  </div>
+                  <div className="h-8 w-px bg-blue-200"></div>
+                  <div className="text-center">
+                    <div className="text-xs text-gray-500">นับถอยหลัง</div>
+                    <div className="text-sm font-bold text-blue-600">
+                      {String(countdown.hours).padStart(2, '0')}:{String(countdown.minutes).padStart(2, '0')}:{String(countdown.seconds).padStart(2, '0')}
+                    </div>
                   </div>
                 </div>
+                <div className="text-right hidden sm:block">
+                  <div className="text-sm font-medium text-gray-800">{user?.name}</div>
+                  <div className="text-xs text-gray-500">Administrator</div>
+                </div>
+                <button onClick={logout} className="text-gray-500 hover:text-red-500 transition p-2" aria-label="ออกจากระบบ">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                </button>
               </div>
-              <div className="text-right hidden sm:block">
-                <div className="text-sm font-medium text-gray-800">{user?.name}</div>
-                <div className="text-xs text-gray-500">Administrator</div>
-              </div>
-              <button onClick={logout} className="text-gray-500 hover:text-red-500 transition p-2" aria-label="ออกจากระบบ">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+
+              {/* Hamburger Menu Button */}
+              <button 
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition"
+                aria-label="เปิดเมนู"
+              >
+                <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {mobileMenuOpen ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  )}
                 </svg>
               </button>
             </div>
+
+            {/* Mobile Menu */}
+            {mobileMenuOpen && (
+              <div className="md:hidden mt-4 pb-4 border-t border-gray-100 pt-4">
+                <div className="flex flex-col gap-2">
+                  {links.map(l => (
+                    <button key={l.key} onClick={() => { setTab(l.key); setMobileMenuOpen(false); }}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition ${tab === l.key ? 'nav-active' : 'text-gray-600 hover:bg-gray-100'}`}
+                      aria-label={`เปลี่ยนไปยังแท็บ${l.label}`}>
+                      {l.icon}
+                      {l.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </nav>
       );
@@ -132,38 +167,64 @@
       const [users, setUsers]       = useState([]);
       const [loading, setLoading]   = useState(true);
       const [filter, setFilter]     = useState('pending');
+      const [viewBooking, setViewBooking] = useState(null);
+      const [showUsageModal, setShowUsageModal] = useState(false);
+      const [showSecurityModal, setShowSecurityModal] = useState(false);
+      const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+
+      // Memoize filtered data to prevent unnecessary recalculations
+      const filtered = React.useMemo(() => 
+        bookings.filter(b => filter === 'all' || b.Status === filter),
+        [bookings, filter]
+      );
+
+      const stats = React.useMemo(() => ({
+        availableRooms: rooms.filter(r => r.Status === 'available').length,
+        pending: bookings.filter(b => b.Status === 'pending').length,
+        approvedToday: bookings.filter(b => b.Status === 'approved' && new Date(b.BookingDate).toDateString() === new Date().toDateString()).length,
+        blockedAccounts: users.filter(u => u.failed_login_count >= 10).length,
+      }), [rooms, bookings, users]);
 
       useEffect(() => { loadData(); }, []);
 
       async function loadData() {
+        setLoading(true);
         try {
           const [bookingsData, roomsData, usersData] = await Promise.all([
             apiFetch('/api/admin/bookings'),
             apiFetch('/api/rooms'),
             apiFetch('/api/admin/users')
           ]);
-          setBookings(bookingsData);
-          setRooms(roomsData);
-          setUsers(usersData);
-        } catch (e) { alert(e.message); }
-        finally { setLoading(false); }
+          setBookings(bookingsData || []);
+          setRooms(roomsData || []);
+          setUsers(usersData || []);
+        } catch (e) {
+          console.error('Error loading data:', e);
+          alert('ไม่สามารถโหลดข้อมูลได้: ' + (e.message || 'Unknown error'));
+          setBookings([]);
+          setRooms([]);
+          setUsers([]);
+        } finally {
+          setLoading(false);
+        }
       }
 
-      async function act(id, action) {
-        try {
-          await apiFetch(`/api/admin/bookings/${id}`, { method: 'PATCH', body: { action } });
-          loadData();
-        } catch (e) { alert(e.message); }
+      function exportUsageData() {
+        const csvContent = [
+          ['BookingID', 'UserName', 'RoomName', 'BookingDate', 'StartTime', 'EndTime', 'Status'].join(','),
+          ...bookings.map(b => [b.BookingID, b.UserName, b.RoomName, b.BookingDate, b.StartTime, b.EndTime, b.Status].join(','))
+        ].join('\n');
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `usage_data_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       }
-
-      const filtered = bookings.filter(b => filter === 'all' || b.Status === filter);
-      
-      const stats = {
-        availableRooms: rooms.filter(r => r.Status === 'available').length,
-        pending: bookings.filter(b => b.Status === 'pending').length,
-        approvedToday: bookings.filter(b => b.Status === 'approved' && new Date(b.BookingDate).toDateString() === new Date().toDateString()).length,
-        blockedAccounts: users.filter(u => u.Blocked === 1).length,
-      };
 
       return (
         <div>
@@ -289,61 +350,11 @@
             </div>
           </div>
 
-          {/* Approval Queue */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-800">คิวอนุมัติ</h3>
-              <span className="text-sm text-gray-500">{bookings.filter(b => b.Status === 'pending').length} รายการรออนุมัติ</span>
-            </div>
-            <div className="bg-white rounded-2xl border overflow-hidden">
-              {bookings.filter(b => b.Status === 'pending').length === 0 ? (
-                <div className="text-center py-8 text-gray-400">
-                  <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p>ไม่มีคำขอรออนุมัติ</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-gray-100">
-                  {bookings.filter(b => b.Status === 'pending').slice(0, 5).map(b => (
-                    <div key={b.BookingID} className="p-4 flex items-center justify-between hover:bg-gray-50">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-                          <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-800">{b.UserName}</div>
-                          <div className="text-sm text-gray-500">{b.RoomName} · {new Date(b.BookingDate).toLocaleDateString('th-TH', { dateStyle: 'short' })} · {b.StartTime}–{b.EndTime}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => act(b.BookingID, 'approved')}
-                          className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition flex items-center gap-1"
-                          aria-label="อนุมัติการจอง">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                          อนุมัติ
-                        </button>
-                        <button onClick={() => act(b.BookingID, 'rejected')}
-                          className="bg-red-500 hover:bg-red-600 text-white text-sm font-medium px-4 py-2 rounded-xl transition flex items-center gap-1"
-                          aria-label="ปฏิเสธการจอง">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                          ปฏิเสธ
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* Recent Notifications */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-gray-800">การแจ้งเตือนล่าสุด</h3>
-              <span className="text-sm text-blue-600 hover:text-blue-700 cursor-pointer">ดูทั้งหมด</span>
+              <span onClick={() => setShowNotificationsModal(true)} className="text-sm text-blue-600 hover:text-blue-700 cursor-pointer">ดูทั้งหมด</span>
             </div>
             <div className="bg-white rounded-2xl border overflow-hidden">
               <div className="divide-y divide-gray-100">
@@ -404,7 +415,10 @@
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-gray-800">รายงานการใช้งาน</h3>
-              <span className="text-sm text-blue-600 hover:text-blue-700 cursor-pointer">ดูรายละเอียด</span>
+              <div className="flex gap-3">
+                <span onClick={() => setShowUsageModal(true)} className="text-sm text-blue-600 hover:text-blue-700 cursor-pointer">ดูรายละเอียด</span>
+                <span onClick={exportUsageData} className="text-sm text-green-600 hover:text-green-700 cursor-pointer">ส่งออก CSV</span>
+              </div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {/* Most Used Rooms */}
@@ -494,7 +508,7 @@
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-gray-800">สถานะความปลอดภัยและระบบ</h3>
-              <span className="text-sm text-blue-600 hover:text-blue-700 cursor-pointer">ดูรายละเอียด</span>
+              <span onClick={() => setShowSecurityModal(true)} className="text-sm text-blue-600 hover:text-blue-700 cursor-pointer">ดูรายละเอียด</span>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Security Status */}
@@ -615,25 +629,227 @@
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right">
-                          {b.Status === 'pending' && (
-                            <div className="flex items-center justify-end gap-2">
-                              <button onClick={() => act(b.BookingID, 'approved')}
-                                className="text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg transition font-medium"
-                                aria-label="อนุมัติการจอง">
-                                อนุมัติ
-                              </button>
-                              <button onClick={() => act(b.BookingID, 'rejected')}
-                                className="text-xs bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg transition font-medium"
-                                aria-label="ปฏิเสธการจอง">
-                                ปฏิเสธ
-                              </button>
-                            </div>
-                          )}
+                          <button onClick={() => setViewBooking(b)} className="text-xs text-blue-600 hover:text-blue-700 font-medium transition">
+                            ดูรายละเอียด
+                          </button>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {/* Booking Details Modal */}
+          {viewBooking && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl max-w-md w-full p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-gray-800">รายละเอียดการจอง</h3>
+                  <button onClick={() => setViewBooking(null)} className="text-gray-400 hover:text-gray-600">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">ห้อง:</span>
+                    <span className="font-medium text-gray-800">{viewBooking.RoomName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">วันที่:</span>
+                    <span className="font-medium text-gray-800">{new Date(viewBooking.BookingDate).toLocaleDateString('th-TH', { dateStyle: 'long' })}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">เวลา:</span>
+                    <span className="font-medium text-gray-800">{viewBooking.StartTime} - {viewBooking.EndTime}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">ผู้จอง:</span>
+                    <span className="font-medium text-gray-800">{viewBooking.UserName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">อีเมล:</span>
+                    <span className="font-medium text-gray-800">{viewBooking.UserEmail}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">สถานะ:</span>
+                    <span className={`text-xs font-medium px-3 py-1 rounded-full border ${STATUS[viewBooking.Status]?.color}`}>
+                      {STATUS[viewBooking.Status]?.label}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Usage Report Modal */}
+          {showUsageModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl max-w-2xl w-full p-6 max-h-[80vh] overflow-y-auto">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-gray-800">รายงานการใช้งาน</h3>
+                  <button onClick={() => setShowUsageModal(false)} className="text-gray-400 hover:text-gray-600">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-blue-50 rounded-xl p-4">
+                      <div className="text-sm text-gray-500">การจองทั้งหมด</div>
+                      <div className="text-2xl font-bold text-blue-600">{bookings.length}</div>
+                    </div>
+                    <div className="bg-green-50 rounded-xl p-4">
+                      <div className="text-sm text-gray-500">อนุมัติแล้ว</div>
+                      <div className="text-2xl font-bold text-green-600">{bookings.filter(b => b.Status === 'approved').length}</div>
+                    </div>
+                    <div className="bg-yellow-50 rounded-xl p-4">
+                      <div className="text-sm text-gray-500">รออนุมัติ</div>
+                      <div className="text-2xl font-bold text-yellow-600">{bookings.filter(b => b.Status === 'pending').length}</div>
+                    </div>
+                    <div className="bg-red-50 rounded-xl p-4">
+                      <div className="text-sm text-gray-500">ถูกปฏิเสธ</div>
+                      <div className="text-2xl font-bold text-red-600">{bookings.filter(b => b.Status === 'rejected').length}</div>
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <h4 className="font-semibold text-gray-800 mb-2">การจองล่าสุด</h4>
+                    <div className="space-y-2">
+                      {bookings.slice(0, 5).map(b => (
+                        <div key={b.BookingID} className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">{b.RoomName} - {b.UserName}</span>
+                          <span className={`text-xs font-medium px-2 py-1 rounded-full border ${STATUS[b.Status]?.color}`}>
+                            {STATUS[b.Status]?.label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Security Modal */}
+          {showSecurityModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl max-w-md w-full p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-gray-800">สถานะความปลอดภัยและระบบ</h3>
+                  <button onClick={() => setShowSecurityModal(false)} className="text-gray-400 hover:text-gray-600">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-xl">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-sm font-medium text-gray-700">สถานะระบบ</span>
+                    </div>
+                    <span className="text-sm font-semibold text-green-600">ปกติ</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-xl">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                      <span className="text-sm font-medium text-gray-700">บัญชีที่ถูกล็อก</span>
+                    </div>
+                    <span className="text-sm font-semibold text-blue-600">{stats.blockedAccounts}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-purple-50 rounded-xl">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                      <span className="text-sm font-medium text-gray-700">ผู้ใช้ทั้งหมด</span>
+                    </div>
+                    <span className="text-sm font-semibold text-purple-600">{users.length}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Notifications Modal */}
+          {showNotificationsModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl max-w-2xl w-full p-6 max-h-[80vh] overflow-y-auto">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-gray-800">การแจ้งเตือนทั้งหมด</h3>
+                  <button onClick={() => setShowNotificationsModal(false)} className="text-gray-400 hover:text-gray-600">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {bookings.length === 0 ? (
+                    <div className="text-center py-8 text-gray-400">
+                      <p>ไม่มีการแจ้งเตือน</p>
+                    </div>
+                  ) : (
+                    bookings.map(b => {
+                      const notificationType = b.Status === 'pending' ? 'new_request' : 
+                                             b.Status === 'approved' ? 'approved' : 
+                                             b.Status === 'rejected' ? 'rejected' : 'cancelled';
+                      const notificationConfig = {
+                        new_request: { 
+                          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
+                          bg: 'bg-blue-100',
+                          text: 'text-blue-600',
+                          label: 'คำขอใหม่'
+                        },
+                        approved: { 
+                          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>,
+                          bg: 'bg-green-100',
+                          text: 'text-green-600',
+                          label: 'อนุมัติแล้ว'
+                        },
+                        rejected: { 
+                          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>,
+                          bg: 'bg-red-100',
+                          text: 'text-red-600',
+                          label: 'ถูกปฏิเสธ'
+                        },
+                        cancelled: { 
+                          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>,
+                          bg: 'bg-gray-100',
+                          text: 'text-gray-600',
+                          label: 'ยกเลิกแล้ว'
+                        }
+                      };
+                      const config = notificationConfig[notificationType] || notificationConfig.new_request;
+                      
+                      return (
+                        <div key={b.BookingID} className="p-4 flex items-center gap-4 bg-gray-50 rounded-xl hover:bg-gray-100">
+                          <div className={`w-10 h-10 ${config.bg} rounded-xl flex items-center justify-center ${config.text}`}>
+                            {config.icon}
+                          </div>
+                          <div className="flex-1">
+                            <div className="text-sm text-gray-800">
+                              <span className="font-medium">{b.UserName}</span> {config.label} สำหรับ {b.RoomName}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {new Date(b.BookingDate).toLocaleDateString('th-TH', { dateStyle: 'short' })} · {b.StartTime}–{b.EndTime}
+                            </div>
+                          </div>
+                          <span className={`text-xs font-medium px-2 py-1 rounded-full border ${STATUS[b.Status]?.color}`}>
+                            {STATUS[b.Status]?.label}
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -672,6 +888,7 @@
 
       async function addRoom(e) {
         e.preventDefault();
+        if (!confirm(`ยืนยันการเพิ่มห้อง: ${addForm.RoomName}?`)) return;
         try {
           await apiFetch('/api/rooms', {
             method: 'POST',
@@ -864,7 +1081,9 @@
       const [users, setUsers]     = useState([]);
       const [form, setForm]       = useState({ name:'', email:'', role:'student', faculty:'', department:'' });
       const [error, setError]     = useState('');
+      const [success, setSuccess] = useState('');
       const [loading, setLoading] = useState(true);
+      const [creating, setCreating] = useState(false);
 
       useEffect(() => { loadUsers(); }, []);
 
@@ -875,18 +1094,75 @@
       }
 
       async function createUser(e) {
-        e.preventDefault(); setError('');
+        e.preventDefault(); setError(''); setSuccess('');
+        
+        // Validation
+        if (!form.name.trim()) return setError('กรุณากรอกชื่อ-นามสกุล');
+        if (!form.email.trim()) return setError('กรุณากรอกอีเมล');
+        if (!form.email.includes('@')) return setError('รูปแบบอีเมลไม่ถูกต้อง');
+        
+        // Generate password from surname (last word of name)
+        const nameParts = form.name.trim().split(' ');
+        const surname = nameParts[nameParts.length - 1] || form.name.trim();
+        const password = surname;
+        
+        if (!confirm(`ยืนยันการสร้างผู้ใช้ใหม่: ${form.name}?\nรหัสผ่านเริ่มต้น: ${password}`)) return;
+        
+        setCreating(true);
+        
+        // Optimistic update - add to UI immediately
+        const tempUser = { 
+          UserID: Date.now(), 
+          Name: form.name, 
+          Email: form.email, 
+          Role: form.role, 
+          Faculty: form.faculty, 
+          Department: form.department,
+          force_change_password: 1
+        };
+        setUsers(prev => [tempUser, ...prev]);
+        
+        const tempForm = { 
+          Name: form.name,
+          Email: form.email,
+          Password: password,
+          Role: form.role,
+          Faculty: form.faculty,
+          Department: form.department
+        };
+        setForm({ name:'', email:'', role:'student', faculty:'', department:'' });
+        
         try {
-          await apiFetch('/api/admin/users', { method: 'POST', body: form });
-          setForm({ name:'', email:'', role:'student', faculty:'', department:'' });
-          loadUsers();
-        } catch (err) { setError(err.message); }
+          const result = await apiFetch('/api/admin/users', { method: 'POST', body: tempForm });
+          console.log('User created:', result);
+          setSuccess('สร้างผู้ใช้สำเร็จแล้ว');
+          // Reload to get the correct data from server
+          await loadUsers();
+          setTimeout(() => setSuccess(''), 3000);
+        } catch (err) {
+          console.error('Error creating user:', err);
+          setError(err.message || 'ไม่สามารถสร้างผู้ใช้ได้');
+          // Rollback on error
+          await loadUsers();
+        } finally {
+          setCreating(false);
+        }
       }
 
       async function deleteUser(id) {
         if (!confirm('ลบผู้ใช้นี้?')) return;
-        try { await apiFetch(`/api/admin/users/${id}`, { method: 'DELETE' }); loadUsers(); }
-        catch (e) { alert(e.message); }
+        
+        // Optimistic update - remove from UI immediately
+        setUsers(prev => prev.filter(u => u.UserID !== id));
+        
+        try {
+          await apiFetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+        } catch (e) {
+          console.error('Error deleting user:', e);
+          alert('ไม่สามารถลบผู้ใช้ได้: ' + (e.message || 'Unknown error'));
+          // Rollback on error
+          await loadUsers();
+        }
       }
 
       const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
@@ -899,6 +1175,10 @@
             {error && <div id="user-error" className="bg-red-50 text-red-700 text-sm rounded-lg px-4 py-3 mb-4 flex items-center gap-2" role="alert">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               {error}
+            </div>}
+            {success && <div className="bg-green-50 text-green-700 text-sm rounded-lg px-4 py-3 mb-4 flex items-center gap-2" role="alert">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              {success}
             </div>}
             <form onSubmit={createUser} className="grid grid-cols-1 md:grid-cols-2 gap-4" aria-describedby="user-error">
               <div>
@@ -926,10 +1206,10 @@
                   className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
               </div>
               <div className="md:col-span-2">
-                <button type="submit"
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-6 py-2.5 rounded-xl transition"
+                <button type="submit" disabled={creating}
+                  className={`bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-sm font-medium px-6 py-2.5 rounded-xl transition`}
                   aria-label="เพิ่มผู้ใช้ใหม่">
-                  + เพิ่มผู้ใช้
+                  {creating ? 'กำลังสร้าง...' : '+ เพิ่มผู้ใช้'}
                 </button>
                 <span className="text-xs text-gray-400 ml-3">รหัสผ่านเริ่มต้น = นามสกุล (ต้องเปลี่ยนเมื่อ Login ครั้งแรก)</span>
               </div>
@@ -992,20 +1272,58 @@
       useEffect(() => { loadHolidays(); }, []);
 
       async function loadHolidays() {
-        try { setHolidays(await apiFetch('/api/admin/holidays')); }
-        catch (e) { alert(e.message); }
+        try {
+          const data = await apiFetch('/api/admin/holidays');
+          console.log('Loaded holidays:', data);
+          setHolidays(data || []);
+        }
+        catch (e) {
+          console.error('Error loading holidays:', e);
+          alert('ไม่สามารถโหลดวันหยุดได้: ' + (e.message || 'Unknown error'));
+        }
       }
 
       async function addHoliday(e) {
         e.preventDefault();
-        try { await apiFetch('/api/admin/holidays', { method: 'POST', body: { date, description: desc } }); setDate(''); setDesc(''); loadHolidays(); }
-        catch (err) { alert(err.message); }
+        if (!confirm(`ยืนยันการเพิ่มวันหยุด: ${date}?`)) return;
+        
+        // Optimistic update - add to UI immediately
+        const tempHoliday = { HolidayID: Date.now(), HolidayDate: date, Description: desc };
+        setHolidays(prev => [tempHoliday, ...prev]);
+        const tempDate = date;
+        const tempDesc = desc;
+        setDate('');
+        setDesc('');
+        
+        try {
+          const result = await apiFetch('/api/admin/holidays', { method: 'POST', body: { HolidayDate: tempDate, Description: tempDesc } });
+          console.log('Holiday added:', result);
+          // Reload to get the correct data from server
+          await loadHolidays();
+        }
+        catch (err) {
+          console.error('Error adding holiday:', err);
+          alert('ไม่สามารถเพิ่มวันหยุดได้: ' + (err.message || 'Unknown error'));
+          // Rollback on error
+          await loadHolidays();
+        }
       }
 
       async function del(id) {
         if (!confirm('ลบวันหยุดนี้?')) return;
-        try { await apiFetch(`/api/admin/holidays/${id}`, { method: 'DELETE' }); loadHolidays(); }
-        catch (e) { alert(e.message); }
+        
+        // Optimistic update - remove from UI immediately
+        setHolidays(prev => prev.filter(h => h.HolidayID !== id));
+        
+        try {
+          await apiFetch(`/api/admin/holidays/${id}`, { method: 'DELETE' });
+        }
+        catch (e) {
+          console.error('Error deleting holiday:', e);
+          alert('ไม่สามารถลบวันหยุดได้: ' + (e.message || 'Unknown error'));
+          // Rollback on error
+          await loadHolidays();
+        }
       }
 
       return (
@@ -1074,10 +1392,17 @@
       async function handleAction(id, action, notes) {
         if (!confirm(`ยืนยันการ${action === 'approved' ? 'อนุมัติ' : 'ปฏิเสธ'}คำขอนี้?`)) return;
         try {
-          await apiFetch(`/api/admin/password-requests/${id}`, {
-            method: 'PATCH',
-            body: { action, notes }
-          });
+          if (action === 'approved') {
+            await apiFetch(`/api/admin/password-requests/${id}/approve`, {
+              method: 'PATCH',
+              body: {}
+            });
+          } else {
+            await apiFetch(`/api/admin/password-requests/${id}/reject`, {
+              method: 'PATCH',
+              body: { Notes: notes }
+            });
+          }
           loadRequests();
         } catch (e) { alert(e.message); }
       }

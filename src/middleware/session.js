@@ -3,7 +3,8 @@ import { createMiddleware } from 'hono/factory';
 const SESSION_LIFETIME = 21600000; // 6 hours (in milliseconds)
 
 export const sessionMiddleware = createMiddleware(async (c, next) => {
-  const sessionId = c.req.header('Cookie')?.match(/session=([^;]+)/)?.[1];
+  const cookieHeader = c.req.header('cookie') || c.req.header('Cookie');
+  const sessionId = cookieHeader?.match(/session=([^;]+)/)?.[1];
   const env = c.env;
   
   if (sessionId && env?.SESSIONS) {

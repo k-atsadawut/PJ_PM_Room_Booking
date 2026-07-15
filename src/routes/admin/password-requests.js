@@ -37,11 +37,6 @@ adminPasswordRequests.get('/', requireAdmin, async (c) => {
 // PATCH /api/admin/password-requests/:id/approve — อนุมัติคำขอรีเซ็ตรหัสผ่าน
 adminPasswordRequests.patch('/:id/approve', requireAdmin, async (c) => {
   const requestId = c.req.param('id');
-  const { newPassword } = await c.req.json();
-
-  if (!newPassword || newPassword.length < 6) {
-    return c.json({ error: 'รหัสผ่านใหม่ต้องมีความยาวไม่น้อยกว่า 6 ตัวอักษร' }, 400);
-  }
 
   // Get request details
   const request = await executeQuery(
@@ -58,12 +53,10 @@ adminPasswordRequests.patch('/:id/approve', requireAdmin, async (c) => {
   const session = c.get('session');
   const adminId = session.user.id;
 
-  const hashedPassword = await hashPassword(newPassword);
-
-  // Update user password
+  // Set force_change_password = 1 so user can change their own password
   await executeQuery(
-    'UPDATE users SET Password = ?, force_change_password = 1 WHERE UserID = ?',
-    [hashedPassword, userId],
+    'UPDATE users SET force_change_password = 1 WHERE UserID = ?',
+    [userId],
     c.env
   );
 
@@ -74,7 +67,7 @@ adminPasswordRequests.patch('/:id/approve', requireAdmin, async (c) => {
     c.env
   );
 
-  return c.json({ success: true });
+  return c.json({ success: true, message: 'อนุมัติคำขอเรียบร้อยแล้ว ผู้ใช้สามารถเปลี่ยนรหัสผ่านได้' });
 });
 
 // PATCH /api/admin/password-requests/:id/reject — ปฏิเสธคำขอรีเซ็ตรหัสผ่าน

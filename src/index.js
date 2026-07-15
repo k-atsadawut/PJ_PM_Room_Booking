@@ -13,14 +13,18 @@ import adminHolidayRoutes from './routes/admin/holidays';
 import adminReportRoutes from './routes/admin/reports';
 import adminPasswordRequestsRoutes from './routes/admin/password-requests';
 import { scheduled } from './scheduled/reminder';
+import { sessionMiddleware } from './middleware/session';
 
 const app = new Hono();
 
 // Middleware
 app.use('*', cors({
-  origin: '*',
+  origin: (origin) => origin || '*',
   credentials: true,
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization'],
 }));
+app.use('*', sessionMiddleware);
 
 // API Routes
 app.route('/api/auth', authRoutes);

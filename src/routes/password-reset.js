@@ -30,7 +30,27 @@ passwordReset.post('/', async (c) => {
     c.env
   );
 
-  return c.json({ success: true, requestId: result.insertId });
+  const requestId = result.insertId;
+
+  // Notify admins about the password reset request
+  const admins = await executeQuery("SELECT UserID FROM users WHERE Role = 'admin'", [], c.env);
+  if (admins.length > 0) {
+    const notifValues = admins.map(a => [
+      a.UserID,
+      null,
+      `มีคำขอรีเซ็ตรหัสผ่านจาก ${email} รอการอนุมัติ`,
+    ]);
+    
+    for (const notif of notifValues) {
+      await executeQuery(
+        'INSERT INTO notifications (UserID, BookingID, Message) VALUES (?, ?, ?)',
+        [notif[0], notif[1], notif[2]],
+        c.env
+      );
+    }
+  }
+
+  return c.json({ success: true, requestId });
 });
 
 // GET /api/forgot-password — ดูสถานะคำขอของตัวเอง

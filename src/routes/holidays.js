@@ -15,6 +15,22 @@ holidays.get('/', requireAuth, async (c) => {
   return c.json(result);
 });
 
+// GET /api/holidays/today — ดูวันหยุดวันนี้
+holidays.get('/today', async (c) => {
+  const today = new Date().toISOString().split('T')[0];
+  const result = await executeQuery(
+    'SELECT * FROM holidays WHERE HolidayDate = ? LIMIT 1',
+    [today],
+    c.env
+  );
+  
+  if (result.length === 0) {
+    return c.json(null);
+  }
+  
+  return c.json(result[0]);
+});
+
 // POST /api/holidays — เพิ่มวันหยุด (admin only)
 holidays.post('/', requireAdmin, async (c) => {
   const { HolidayDate, Description } = await c.req.json();

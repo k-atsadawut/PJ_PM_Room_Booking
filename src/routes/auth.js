@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { requireAuth } from '../middleware/auth';
-import { createSession, destroySession } from '../middleware/session';
+import { createSession, destroySession, getSession } from '../middleware/session';
 import { hashPassword, verifyPassword } from '../utils/password';
 import { executeQuery } from '../config/db';
 
@@ -15,21 +15,6 @@ auth.post('/login', async (c) => {
   
   if (!email || !password) {
     return c.json({ error: 'กรุณากรอกอีเมลและรหัสผ่าน' }, 400);
-  }
-
-  // Check if today is a holiday
-  const today = new Date().toISOString().split('T')[0];
-  const holidays = await executeQuery(
-    'SELECT HolidayID, Description FROM holidays WHERE HolidayDate = ? LIMIT 1',
-    [today],
-    c.env
-  );
-  
-  if (holidays.length > 0) {
-    return c.json({ 
-      error: `วันนี้เป็นวันหยุด (${holidays[0].Description || 'วันหยุดพิเศษ'}) ระบบไม่เปิดให้ใช้งาน`,
-      isHoliday: true
-    }, 403);
   }
 
   const users = await executeQuery(
@@ -147,7 +132,22 @@ auth.post('/change-password', requireAuth, async (c) => {
     c.env
   );
 
-  session.user.forceChangePassword = false;
+  // Update session in KV store to reflect the password change
+  const sessionId = c.get('sessionId');
+  if (sessionId) {
+    const updatedSessionData = {
+      user: {
+        ...session.user,
+        forceChangePassword: false
+      },
+      createdAt: session.createdAt,
+      expiresAt: session.expiresAt
+    };
+    await c.env.SESSIONS.put(sessionId, JSON.stringify(updatedSessionData), {
+      expirationTtl: 21600 // 6 hours in seconds
+    });
+  }
+
   return c.json({ success: true });
 });
 
