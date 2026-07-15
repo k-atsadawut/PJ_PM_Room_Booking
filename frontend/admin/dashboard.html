@@ -257,6 +257,42 @@
         }
       }
 
+      async function handleApprove(bookingId) {
+        // Optimistic UI Update: Instantly set status to approved for immediate responsiveness
+        setBookings(prev => prev.map(b => b.BookingID === bookingId ? { ...b, Status: 'approved' } : b));
+        if (viewBooking && viewBooking.BookingID === bookingId) {
+          setViewBooking(prev => ({ ...prev, Status: 'approved' }));
+        }
+        try {
+          await apiFetch(`/api/admin/bookings/${bookingId}`, {
+            method: 'PATCH',
+            body: { action: 'approved' }
+          });
+        } catch (e) {
+          setGlobalError('ไม่สามารถอนุมัติการจองได้: ' + (e.message || 'Unknown error'));
+          // Reload actual state from backend if it fails
+          loadData();
+        }
+      }
+
+      async function handleReject(bookingId) {
+        // Optimistic UI Update: Instantly set status to rejected for immediate responsiveness
+        setBookings(prev => prev.map(b => b.BookingID === bookingId ? { ...b, Status: 'rejected' } : b));
+        if (viewBooking && viewBooking.BookingID === bookingId) {
+          setViewBooking(prev => ({ ...prev, Status: 'rejected' }));
+        }
+        try {
+          await apiFetch(`/api/admin/bookings/${bookingId}`, {
+            method: 'PATCH',
+            body: { action: 'rejected' }
+          });
+        } catch (e) {
+          setGlobalError('ไม่สามารถปฏิเสธการจองได้: ' + (e.message || 'Unknown error'));
+          // Reload actual state from backend if it fails
+          loadData();
+        }
+      }
+
       function exportUsageData() {
         const csvContent = [
           ['BookingID', 'UserName', 'RoomName', 'BookingDate', 'StartTime', 'EndTime', 'Status'].join(','),
@@ -677,9 +713,27 @@
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <button onClick={() => setViewBooking(b)} className="text-xs text-blue-600 hover:text-blue-700 font-medium transition">
-                            ดูรายละเอียด
-                          </button>
+                          <div className="flex justify-end items-center gap-3">
+                            {b.Status === 'pending' && (
+                              <>
+                                <button 
+                                  onClick={() => handleApprove(b.BookingID)}
+                                  className="text-xs bg-green-50 text-green-700 hover:bg-green-100 px-2.5 py-1.5 rounded-xl font-medium transition"
+                                >
+                                  อนุมัติ
+                                </button>
+                                <button 
+                                  onClick={() => handleReject(b.BookingID)}
+                                  className="text-xs bg-red-50 text-red-700 hover:bg-red-100 px-2.5 py-1.5 rounded-xl font-medium transition"
+                                >
+                                  ปฏิเสธ
+                                </button>
+                              </>
+                            )}
+                            <button onClick={() => setViewBooking(b)} className="text-xs text-blue-600 hover:text-blue-700 font-medium transition">
+                              ดูรายละเอียด
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -728,6 +782,22 @@
                       {STATUS[viewBooking.Status]?.label}
                     </span>
                   </div>
+                  {viewBooking.Status === 'pending' && (
+                    <div className="flex gap-3 mt-6 pt-4 border-t border-gray-100">
+                      <button
+                        onClick={() => handleApprove(viewBooking.BookingID)}
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 rounded-xl transition text-sm shadow-sm hover:shadow"
+                      >
+                        อนุมัติ
+                      </button>
+                      <button
+                        onClick={() => handleReject(viewBooking.BookingID)}
+                        className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2 rounded-xl transition text-sm shadow-sm hover:shadow"
+                      >
+                        ปฏิเสธ
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1399,31 +1469,26 @@
 
       async function addHoliday(e) {
         e.preventDefault();
-        openConfirm({
-          title: 'ยืนยันการเพิ่มวันหยุด',
-          description: `เพิ่มวันหยุด ${date} ?`,
-          confirmText: 'เพิ่มวันหยุด',
-          cancelText: 'ยกเลิก',
-          onConfirm: async () => {
-            // Optimistic update - add to UI immediately
-            const tempHoliday = { HolidayID: Date.now(), HolidayDate: date, Description: desc };
-            setHolidays(prev => [tempHoliday, ...prev]);
-            const tempDate = date;
-            const tempDesc = desc;
-            setDate('');
-            setDesc('');
-            try {
-              const result = await apiFetch('/api/admin/holidays', { method: 'POST', body: { HolidayDate: tempDate, Description: tempDesc } });
-              console.log('Holiday added:', result);
-              await loadHolidays();
-            }
-            catch (err) {
-              console.error('Error adding holiday:', err);
-              setGlobalError('ไม่สามารถเพิ่มวันหยุดได้: ' + (err.message || 'Unknown error'));
-              await loadHolidays();
-            }
-          }
-        });
+        if (!date) return;
+
+        // Optimistic UI update - add to UI immediately and sort by date descending
+        const tempHoliday = { HolidayID: Date.now(), HolidayDate: date, Description: desc };
+        setHolidays(prev => [tempHoliday, ...prev].sort((a, b) => new Date(b.HolidayDate) - new Date(a.HolidayDate)));
+        
+        const tempDate = date;
+        const tempDesc = desc;
+        setDate('');
+        setDesc('');
+        try {
+          const result = await apiFetch('/api/admin/holidays', { method: 'POST', body: { HolidayDate: tempDate, Description: tempDesc } });
+          console.log('Holiday added:', result);
+          await loadHolidays();
+        }
+        catch (err) {
+          console.error('Error adding holiday:', err);
+          setGlobalError('ไม่สามารถเพิ่มวันหยุดได้: ' + (err.message || 'Unknown error'));
+          await loadHolidays();
+        }
       }
 
       async function del(id) {

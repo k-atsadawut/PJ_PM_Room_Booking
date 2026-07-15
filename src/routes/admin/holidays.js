@@ -17,7 +17,9 @@ adminHolidays.get('/', requireAdmin, async (c) => {
 
 // POST /api/admin/holidays — เพิ่มวันหยุด
 adminHolidays.post('/', requireAdmin, async (c) => {
-  const { HolidayDate, Description } = await c.req.json();
+  const body = await c.req.json();
+  const HolidayDate = body.HolidayDate || body.date;
+  const Description = body.Description || body.description;
   
   if (!HolidayDate) {
     return c.json({ error: 'กรุณาระบุวันที่' }, 400);

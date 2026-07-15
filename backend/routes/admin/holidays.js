@@ -11,12 +11,14 @@ router.get('/', requireAdmin, async (req, res) => {
 
 // POST /api/admin/holidays
 router.post('/', requireAdmin, async (req, res) => {
-  const { date, description } = req.body;
-  if (!date) return res.status(400).json({ error: 'กรุณาระบุวันที่' });
+  const { date, description, HolidayDate, Description } = req.body;
+  const targetDate = date || HolidayDate;
+  const targetDesc = description || Description;
+  if (!targetDate) return res.status(400).json({ error: 'กรุณาระบุวันที่' });
 
   await db.execute(
     'INSERT INTO holidays (HolidayDate, Description) VALUES (?, ?)',
-    [date, description || null]
+    [targetDate, targetDesc || null]
   );
   res.json({ success: true });
 });

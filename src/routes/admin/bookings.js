@@ -39,6 +39,45 @@ adminBookings.get('/', requireAdmin, async (c) => {
   return c.json(result);
 });
 
+// PATCH /api/admin/bookings/:id — approve หรือ reject (Unified API)
+adminBookings.patch('/:id', requireAdmin, async (c) => {
+  const bookingId = c.req.param('id');
+  const { action } = await c.req.json();
+  
+  if (!['approved', 'rejected'].includes(action)) {
+    return c.json({ error: 'action ต้องเป็น approved หรือ rejected' }, 400);
+  }
+
+  await executeQuery(
+    "UPDATE bookings SET Status = ? WHERE BookingID = ?",
+    [action, bookingId],
+    c.env
+  );
+
+  // Send notification to user
+  const booking = await executeQuery(`
+    SELECT b.UserID, b.BookingDate, b.StartTime, b.EndTime, r.RoomName
+    FROM bookings b
+    JOIN rooms r ON b.RoomID = r.RoomID
+    WHERE b.BookingID = ?
+  `, [bookingId], c.env);
+
+  if (booking.length > 0) {
+    const b = booking[0];
+    const msg = action === 'approved'
+      ? `การจองห้อง ${b.RoomName} วันที่ ${b.BookingDate} เวลา ${b.StartTime}-${b.EndTime} ได้รับการอนุมัติแล้ว`
+      : `การจองห้อง ${b.RoomName} วันที่ ${b.BookingDate} เวลา ${b.StartTime}-${b.EndTime} ถูกปฏิเสธ`;
+      
+    await executeQuery(
+      'INSERT INTO notifications (UserID, BookingID, Message) VALUES (?, ?, ?)',
+      [b.UserID, bookingId, msg],
+      c.env
+    );
+  }
+
+  return c.json({ success: true });
+});
+
 // PATCH /api/admin/bookings/:id/approve — อนุมัติการจอง
 adminBookings.patch('/:id/approve', requireAdmin, async (c) => {
   const bookingId = c.req.param('id');
