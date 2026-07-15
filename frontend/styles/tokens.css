@@ -191,3 +191,12 @@
   background: #475569;
 }
 
+/* Hide scrollbar for elements with scrollbar-none class */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
