@@ -5,10 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>เข้าสู่ระบบ — ระบบจองห้องผลิตสื่อดิจิทัล</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/styles/tailwind-config.js"></script>
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/theme.js"></script>
   <link rel="stylesheet" href="/styles/tokens.css">
   <link rel="stylesheet" href="/styles/accessibility.css">
   <style>
@@ -49,7 +51,7 @@
       const [error, setError]       = useState('');
       const [loading, setLoading]   = useState(false);
       const [showPassword, setShowPassword] = useState(false);
-      const [holiday, setHoliday]   = useState(null);
+      const [isDark, setIsDark] = useState(document.documentElement.classList.contains('dark'));
 
       useEffect(() => {
         // Check if today is a holiday
@@ -67,6 +69,15 @@
             location.href = user.role === 'admin' ? '/admin/dashboard.html' : '/dashboard.html';
           })
           .catch(() => {});
+
+        const handleThemeChange = (e) => {
+          setIsDark(document.documentElement.classList.contains('dark'));
+        };
+        window.addEventListener('themeChanged', handleThemeChange);
+
+        return () => {
+          window.removeEventListener('themeChanged', handleThemeChange);
+        };
       }, []);
 
       async function handleSubmit(e) {
@@ -96,7 +107,25 @@
       }
 
       return (
-        <div className="min-h-screen flex">
+        <div className="min-h-screen flex relative">
+          {/* Theme Toggle Button */}
+          <div className="absolute top-4 right-4 z-50">
+            <button 
+              onClick={() => window.toggleTheme()} 
+              className="text-gray-500 hover:text-blue-600 transition p-2.5 bg-white shadow-md border rounded-xl hover:shadow-lg"
+              aria-label="เปลี่ยนธีม"
+            >
+              {isDark ? (
+                <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+              )}
+            </button>
+          </div>
           {/* Left Panel - Branding */}
           <div className="hidden">
             <div className="max-w-lg text-white">
