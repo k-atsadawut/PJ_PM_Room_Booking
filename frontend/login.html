@@ -63,6 +63,7 @@
 
         apiFetch('/api/auth/me')
           .then(({ user }) => {
+            sessionStorage.setItem('showHolidayPopup', 'true');
             location.href = user.role === 'admin' ? '/admin/dashboard.html' : '/dashboard.html';
           })
           .catch(() => {});
@@ -80,6 +81,7 @@
           if (user.forceChangePassword) {
             location.href = '/change-password.html';
           } else {
+            sessionStorage.setItem('showHolidayPopup', 'true');
             location.href = user.role === 'admin' ? '/admin/dashboard.html' : '/dashboard.html';
           }
         } catch (err) {

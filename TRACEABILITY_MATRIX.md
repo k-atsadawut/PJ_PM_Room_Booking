@@ -15,7 +15,7 @@
 | FR | คำอธิบาย | ไฟล์/บรรทัด | สถานะ | หมายเหตุ |
 |----|-----------|-------------|--------|-----------|
 | FR-01 | เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มต้น | `backend/routes/bookings.js:32-34` | Done | Validation ก่อน insert |
-| FR-02 | จองได้เฉพาะวันปัจจุบัน | `backend/routes/bookings.js:42-45` | Done | เช็ค date === today |
+| FR-02 | สามารถจองห้องล่วงหน้าได้ | `backend/routes/bookings.js:42-45` | Done | ป้องกันจองย้อนหลังและอนุญาตให้จองล่วงหน้าได้ |
 | FR-03 | ตรวจสอบ conflict (ช่วงเวลาซ้ำ) | `backend/routes/bookings.js:68-79` | Done | Query หา booking ซ้อนทับ |
 | FR-04 | ดูห้องทั้งหมดพร้อมสถานะวันนี้ | `backend/routes/rooms.js:6-52` | Done | JSON_ARRAYAGG bookings_today |
 | FR-05 | จองได้เฉพาะเวลาทำการ 08:30–17:00 | `backend/routes/bookings.js:37-39, 48-51` | Done | เช็ค start/end time + หมดเวลาจอง |

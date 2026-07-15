@@ -68,45 +68,32 @@ bookings.post('/', requireAuth, async (c) => {
 
   // FR-01: เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มต้น
   if (start >= end) {
-    return c.json({ error: 'เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มต้น (FR-01)' }, 400);
+    return c.json({ error: 'เวลาสิ้นสุดการจองต้องอยู่หลังเวลาเริ่มต้น' }, 400);
   }
 
   // FR-05: เวลาทำการ 08:30–17:00
   if (start < OPEN_TIME || end > CLOSE_TIME) {
-    return c.json({ error: 'จองได้เฉพาะช่วง 08:30–17:00 น. (FR-05)' }, 400);
+    return c.json({ error: 'สามารถจองห้องได้เฉพาะในช่วงเวลาทำการ 08:30 น. ถึง 17:00 น. เท่านั้น' }, 400);
   }
 
-  // FR-02: จองได้เฉพาะวันปัจจุบัน หรือวันถัดไปถ้าวันนี้เป็นวันหยุด
+  // FR-02: ป้องกันการจองย้อนหลัง และอนุญาตให้จองล่วงหน้าได้
   const today = new Date().toISOString().split('T')[0];
-  const todayHoliday = await executeQuery(
-    'SELECT HolidayID FROM holidays WHERE HolidayDate = ? LIMIT 1',
-    [today],
-    c.env
-  );
-  
-  const isTodayHoliday = todayHoliday.length > 0;
-  const allowedDate = isTodayHoliday ? getNextAvailableDay(today, c.env) : today;
-  
-  if (date !== allowedDate) {
-    if (isTodayHoliday) {
-      return c.json({ error: `วันนี้เป็นวันหยุด สามารถจองได้เฉพาะวันที่ ${allowedDate} เท่านั้น` }, 400);
-    } else {
-      return c.json({ error: 'จองได้เฉพาะวันปัจจุบันเท่านั้น (FR-02)' }, 400);
-    }
+  if (date < today) {
+    return c.json({ error: 'ไม่สามารถจองห้องย้อนหลังได้ กรุณาเลือกวันที่ปัจจุบันหรือวันข้างหน้า' }, 400);
   }
 
-  // FR-05: เลยเวลาปิดแล้ว (ตรวจเฉพาะถ้าจองวันนี้)
-  if (!isTodayHoliday) {
+  // FR-05: เลยเวลาปิดแล้ว (เฉพาะกรณีจองวันปัจจุบัน)
+  if (date === today) {
     const nowTime = new Date().toTimeString().slice(0, 5);
     if (nowTime >= CLOSE_TIME) {
-      return c.json({ error: 'หมดเวลาจองสำหรับวันนี้แล้ว (FR-05)' }, 400);
+      return c.json({ error: 'เลยเวลาทำการสำหรับการจองห้องในวันนี้แล้ว (หลัง 17:00 น.) โปรดเลือกจองล่วงหน้าในวันอื่นแทน' }, 400);
     }
   }
 
   // FR-06: เสาร์-อาทิตย์
   const dow = new Date(date + 'T00:00:00').getDay();
   if (dow === 0 || dow === 6) {
-    return c.json({ error: 'ไม่เปิดให้จองในวันเสาร์-อาทิตย์ (FR-06)' }, 400);
+    return c.json({ error: 'ระบบไม่เปิดให้จองห้องในวันเสาร์และวันอาทิตย์' }, 400);
   }
 
   // FR-12: วันหยุดพิเศษ
@@ -117,7 +104,7 @@ bookings.post('/', requireAuth, async (c) => {
   );
   
   if (holidays.length > 0) {
-    return c.json({ error: 'วันนี้เป็นวันหยุดพิเศษ ไม่เปิดให้จอง (FR-12)' }, 400);
+    return c.json({ error: 'วันที่เลือกเป็นวันหยุดพิเศษของมหาวิทยาลัย จึงไม่เปิดให้บริการจองห้อง' }, 400);
   }
 
   // FR-03: ตรวจ conflict
@@ -131,7 +118,7 @@ bookings.post('/', requireAuth, async (c) => {
   `, [roomId, date, end, start], c.env);
 
   if (conflicts.length > 0) {
-    return c.json({ error: 'ช่วงเวลานี้มีผู้จองอยู่แล้ว กรุณาเลือกเวลาอื่น (FR-03)' }, 400);
+    return c.json({ error: 'ช่วงเวลานี้มีผู้จองไว้แล้ว กรุณาเลือกช่วงเวลาอื่นที่ว่าง' }, 400);
   }
 
   // BR-06 / FR-06: one booking per user per day
@@ -143,7 +130,7 @@ bookings.post('/', requireAuth, async (c) => {
   `, [session.user.id, date], c.env);
 
   if (hasExistingBookingForDate(userBookings, date)) {
-    return c.json({ error: 'คุณมีคำขอจองในวันที่เลือกแล้ว ไม่สามารถจองเพิ่มได้ในวันเดียวกัน (BR-06)' }, 400);
+    return c.json({ error: 'คุณมีการจองหรือคำขอจองในวันนี้แล้ว ระบบจำกัดให้จองได้เพียง 1 ครั้งต่อวันเท่านั้น' }, 400);
   }
 
   // สร้างการจอง - ถ้าไม่มี conflict ให้อนุมัติทันที
