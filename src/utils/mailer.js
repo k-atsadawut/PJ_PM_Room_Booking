@@ -1,41 +1,42 @@
 // Email utility for Cloudflare Workers
-// Uses Cloudflare Email Routing or external SMTP service
+// Sends email via Gmail SMTP using nodemailer.
+// Cloudflare Workers supports raw TCP sockets via the `nodejs_compat` flag,
+// which enables nodemailer's SMTP transport.
+//
+// Setup:
+//   1. Enable 2-Step Verification on the Gmail account
+//   2. Create an App Password at https://myaccount.google.com/apppasswords
+//   3. Set these secrets via wrangler:
+//        npx wrangler secret put GMAIL_USER       (e.g. you@gmail.com)
+//        npx wrangler secret put GMAIL_APP_PASSWORD (16-char App Password)
+
+import nodemailer from 'nodemailer';
 
 export async function sendEmail({ to, subject, text }, env) {
   try {
-    // Option 1: Use Cloudflare Email Routing (recommended for production)
-    // This requires setting up Email Routing in Cloudflare dashboard
-    // For now, we'll use a simple HTTP-based email service
-    
-    // Option 2: Use external service like SendGrid, Mailgun, or Resend via API
-    // This example uses a generic HTTP POST approach
-    
-    if (!env.SMTP_HOST || !env.SMTP_USER || !env.SMTP_PASSWORD) {
-      console.error('Email configuration missing');
-      return { success: false, error: 'Email configuration missing' };
+    if (!env.GMAIL_USER || !env.GMAIL_APP_PASSWORD) {
+      console.error('Email configuration missing: GMAIL_USER / GMAIL_APP_PASSWORD not set');
+      return { success: false, error: 'Email configuration missing (GMAIL_USER / GMAIL_APP_PASSWORD)' };
     }
 
-    // For Cloudflare Workers, we can use fetch to call email APIs
-    // Example using a hypothetical email service API
-    const response = await fetch('https://api.email-service.com/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${env.SMTP_PASSWORD}`,
+    // Create a fresh transporter per request. Workers are stateless, and
+    // reusing a pooled connection across invocations is unreliable here.
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: env.GMAIL_USER,
+        pass: env.GMAIL_APP_PASSWORD,
       },
-      body: JSON.stringify({
-        to,
-        from: env.SMTP_FROM || 'noreply@roombooking.system',
-        subject,
-        text,
-      }),
     });
 
-    if (!response.ok) {
-      throw new Error(`Email service returned ${response.status}`);
-    }
+    const info = await transporter.sendMail({
+      from: env.GMAIL_USER,   // Gmail forces From = authenticated account
+      to,
+      subject,
+      text,
+    });
 
-    return { success: true };
+    return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('Email send error:', error);
     return { success: false, error: error.message };
@@ -103,4 +104,23 @@ export async function sendReminderEmail(bookingData, env) {
   `.trim();
 
   return await sendEmail({ to: bookingData.UserEmail, subject, text }, env);
+}
+
+export async function sendOTPEmail({ to, name, otp }, env) {
+  const subject = 'OTP สำหรับเปลี่ยนรหัสผ่าน';
+  const text = `
+เรียน ${name},
+
+รหัส OTP สำหรับเปลี่ยนรหัสผ่านของคุณคือ:
+
+${otp}
+
+รหัสนี้จะหมดอายุใน 10 นาที
+หากคุณไม่ได้ขอรหัสนี้ กรุณาละเว้น
+
+ขอบคุณ,
+ระบบจองห้อง
+  `.trim();
+
+  return await sendEmail({ to, subject, text }, env);
 }

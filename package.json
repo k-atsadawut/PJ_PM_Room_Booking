@@ -16,7 +16,8 @@
   },
   "dependencies": {
     "hono": "^4.0.0",
-    "mysql2": "^3.6.5"
+    "mysql2": "^3.6.5",
+    "nodemailer": "^9.0.3"
   },
   "devDependencies": {
     "wrangler": "^4.110.0"

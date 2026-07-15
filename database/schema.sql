@@ -138,3 +138,22 @@ CREATE TABLE password_reset_requests (
     CONSTRAINT fk_reset_admin FOREIGN KEY (ProcessedBy) REFERENCES users(UserID)
         ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB;
+
+-- ------------------------------------------------------------
+-- ตาราง OTP (รองรับ OTP-based Password Change)
+-- ------------------------------------------------------------
+CREATE TABLE otp_codes (
+    OTPID       INT AUTO_INCREMENT PRIMARY KEY,
+    UserID      INT             NOT NULL,
+    Email       VARCHAR(150)    NOT NULL,
+    Code        VARCHAR(6)      NOT NULL,
+    Type        ENUM('password_change','email_verification','password_reset') NOT NULL DEFAULT 'password_change',
+    ExpiresAt   DATETIME        NOT NULL,
+    Used        TINYINT(1)      NOT NULL DEFAULT 0,
+    CreatedAt   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_otp_user FOREIGN KEY (UserID) REFERENCES users(UserID)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    INDEX idx_otp_code (Code),
+    INDEX idx_otp_user (UserID),
+    INDEX idx_otp_expires (ExpiresAt)
+) ENGINE=InnoDB;

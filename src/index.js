@@ -12,6 +12,8 @@ import adminBookingRoutes from './routes/admin/bookings';
 import adminHolidayRoutes from './routes/admin/holidays';
 import adminReportRoutes from './routes/admin/reports';
 import adminPasswordRequestsRoutes from './routes/admin/password-requests';
+import adminNotifyRoutes from './routes/admin/notify';
+import otpRoutes from './routes/otp';
 import { scheduled } from './scheduled/reminder';
 import { sessionMiddleware } from './middleware/session';
 
@@ -39,6 +41,8 @@ app.route('/api/admin/bookings', adminBookingRoutes);
 app.route('/api/admin/holidays', adminHolidayRoutes);
 app.route('/api/admin/reports', adminReportRoutes);
 app.route('/api/admin/password-requests', adminPasswordRequestsRoutes);
+app.route('/api/admin/notify', adminNotifyRoutes);
+app.route('/api/otp', otpRoutes);
 
 // Fallback - SPA-style redirect
 app.get('*', async (c) => {

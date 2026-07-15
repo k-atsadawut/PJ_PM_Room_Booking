@@ -69,6 +69,7 @@
         { key: 'users',    label: 'ผู้ใช้งาน', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg> },
         { key: 'holidays', label: 'วันหยุด', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg> },
         { key: 'password-requests', label: 'คำขอลืมรหัส', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg> },
+        { key: 'notify', label: 'แจ้งเตือน', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg> },
       ];
       return (
         <nav className="bg-white shadow-sm px-4 sm:px-6 py-4">
@@ -1389,37 +1390,20 @@
         catch (e) { alert(e.message); }
       }
 
-      async function handleAction(id, action, notes) {
-        if (!confirm(`ยืนยันการ${action === 'approved' ? 'อนุมัติ' : 'ปฏิเสธ'}คำขอนี้?`)) return;
-        try {
-          if (action === 'approved') {
-            await apiFetch(`/api/admin/password-requests/${id}/approve`, {
-              method: 'PATCH',
-              body: {}
-            });
-          } else {
-            await apiFetch(`/api/admin/password-requests/${id}/reject`, {
-              method: 'PATCH',
-              body: { Notes: notes }
-            });
-          }
-          loadRequests();
-        } catch (e) { alert(e.message); }
-      }
-
       const filtered = filter === 'all' ? requests : requests.filter(r => r.Status === filter);
       const STATUS = {
-        pending: { label: 'รอดำเนินการ', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
-        approved: { label: 'อนุมัติแล้ว', color: 'bg-green-100 text-green-800 border-green-200' },
-        rejected: { label: 'ปฏิเสธ', color: 'bg-red-100 text-red-800 border-red-200' },
+        pending:         { label: 'รอดำเนินการ',  color: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+        approved:        { label: 'อนุมัติแล้ว',    color: 'bg-green-100 text-green-800 border-green-200' },
+        rejected:        { label: 'ปฏิเสธ',        color: 'bg-red-100 text-red-800 border-red-200' },
+        'auto-processed': { label: 'ยืนยัน OTP แล้ว', color: 'bg-blue-100 text-blue-800 border-blue-200' },
       };
 
       return (
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <h2 className="text-xl font-bold text-gray-800">คำขอลืมรหัสผ่าน</h2>
-            <div className="flex gap-2">
-              {['all','pending','approved','rejected'].map(f => (
+            <h2 className="text-xl font-bold text-gray-800">ประวัติคำขอลืมรหัสผ่าน</h2>
+            <div className="flex gap-2 flex-wrap">
+              {['all','auto-processed','pending','approved','rejected'].map(f => (
                 <button key={f} onClick={() => setFilter(f)}
                   className={`text-sm px-4 py-2 rounded-xl border transition font-medium
                     ${filter === f ? 'nav-active border-transparent' : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'}`}
@@ -1441,59 +1425,203 @@
             <div className="space-y-3">
               {filtered.map(r => (
                 <div key={r.RequestID} className="bg-white rounded-2xl border px-6 py-4 card-hover transition-all duration-200">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className={`text-xs font-medium px-3 py-1 rounded-full border ${STATUS[r.Status]?.color}`}>
-                          {STATUS[r.Status]?.label}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {new Date(r.RequestDate).toLocaleString('th-TH')}
-                        </span>
-                      </div>
-                      <div className="font-semibold text-gray-800">{r.UserName}</div>
-                      <div className="text-sm text-gray-600">{r.Email}</div>
-                      {r.UserPassword && (
-                        <div className="text-sm text-gray-500 mt-1">
-                          <span className="font-medium">รหัสผ่านปัจจุบัน:</span> {r.UserPassword}
-                        </div>
-                      )}
-                      {r.Notes && (
-                        <div className="text-sm text-gray-500 mt-1">
-                          <span className="font-medium">หมายเหตุ:</span> {r.Notes}
-                        </div>
-                      )}
-                      {r.ProcessedDate && (
-                        <div className="text-xs text-gray-400 mt-1">
-                          ดำเนินการเมื่อ {new Date(r.ProcessedDate).toLocaleString('th-TH')}
-                          {r.AdminName && ` โดย ${r.AdminName}`}
-                        </div>
-                      )}
-                    </div>
-                    {r.Status === 'pending' && (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleAction(r.RequestID, 'approved')}
-                          className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition"
-                          aria-label="อนุมัติคำขอลืมรหัสผ่าน">
-                          อนุมัติ
-                        </button>
-                        <button
-                          onClick={() => {
-                            const notes = prompt('เหตุผลในการปฏิเสธ (ถ้ามี):');
-                            if (notes !== null) handleAction(r.RequestID, 'rejected', notes);
-                          }}
-                          className="bg-red-500 hover:bg-red-600 text-white text-sm font-medium px-4 py-2 rounded-xl transition"
-                          aria-label="ปฏิเสธคำขอลืมรหัสผ่าน">
-                          ปฏิเสธ
-                        </button>
-                      </div>
-                    )}
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className={`text-xs font-medium px-3 py-1 rounded-full border ${STATUS[r.Status]?.color || 'bg-gray-100 text-gray-800 border-gray-200'}`}>
+                      {STATUS[r.Status]?.label || r.Status}
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      {new Date(r.RequestDate).toLocaleString('th-TH')}
+                    </span>
                   </div>
+                  <div className="font-semibold text-gray-800">{r.UserName}</div>
+                  <div className="text-sm text-gray-600">{r.Email}</div>
                 </div>
               ))}
             </div>
           )}
+        </div>
+      );
+    }
+
+    /* ─── Tab: Notify (ส่งอีเมลแจ้งเตือน) ─── */
+    const NOTIFY_TEMPLATES = {
+      announce: {
+        label: 'ประกาศทั่วไป',
+        subject: 'ประกาศจากผู้ดูแลระบบ',
+        body: 'เรียน ผู้ใช้งาน,\n\nเนื้อหาประกาศของคุณ...\n\nขอแสดงความนับถือ\nผู้ดูแลระบบจองห้อง',
+      },
+      booking: {
+        label: 'แจ้งเตือนการจอง',
+        subject: 'แจ้งเตือนเกี่ยวกับการจองห้อง',
+        body: 'เรียน ผู้ใช้งาน,\n\nเกี่ยวกับการจองห้องของคุณ...\n\nหากมีข้อสงสัย กรุณาติดต่อเจ้าหน้าที่\n\nผู้ดูแลระบบจองห้อง',
+      },
+      holiday: {
+        label: 'แจ้งวันหยุด/ปิดทำการ',
+        subject: 'แจ้งวันหยุด/ปิดทำการ',
+        body: 'เรียน ผู้ใช้งาน,\n\nขอแจ้งว่าระบบจะปิดให้บริการในวันหยุด...\n\nขออภัยในความไม่สะดวก\n\nผู้ดูแลระบบจองห้อง',
+      },
+    };
+
+    function NotifyTab() {
+      const [users, setUsers]       = useState([]);
+      const [selected, setSelected] = useState({});   // { [UserID]: true }
+      const [subject, setSubject]   = useState('');
+      const [body, setBody]         = useState('');
+      const [template, setTemplate] = useState('');
+      const [search, setSearch]     = useState('');
+      const [error, setError]       = useState('');
+      const [result, setResult]     = useState(null); // { sent, failed }
+      const [sending, setSending]   = useState(false);
+      const [loading, setLoading]   = useState(true);
+
+      useEffect(() => { loadUsers(); }, []);
+
+      async function loadUsers() {
+        try { setUsers(await apiFetch('/api/admin/users')); }
+        catch (e) { setError(e.message); }
+        finally { setLoading(false); }
+      }
+
+      const ROLE_LABEL = { student: 'นักศึกษา', teacher: 'อาจารย์', admin: 'Admin' };
+
+      const filtered = users.filter(u => {
+        const q = search.trim().toLowerCase();
+        if (!q) return true;
+        return (u.Name || '').toLowerCase().includes(q) || (u.Email || '').toLowerCase().includes(q);
+      });
+
+      const selectedIds = Object.keys(selected).filter(k => selected[k]).map(Number);
+      const selectedCount = selectedIds.length;
+
+      function toggle(id) {
+        setSelected(prev => ({ ...prev, [id]: !prev[id] }));
+      }
+      function selectByRole(role) {
+        setSelected(prev => {
+          const next = { ...prev };
+          users.filter(u => u.Role === role).forEach(u => { next[u.UserID] = true; });
+          return next;
+        });
+      }
+      function selectAll() {
+        setSelected(prev => {
+          const next = { ...prev };
+          users.forEach(u => { next[u.UserID] = true; });
+          return next;
+        });
+      }
+      function clearAll() { setSelected({}); }
+
+      function applyTemplate(key) {
+        setTemplate(key);
+        if (key && NOTIFY_TEMPLATES[key]) {
+          setSubject(NOTIFY_TEMPLATES[key].subject);
+          setBody(NOTIFY_TEMPLATES[key].body);
+        }
+      }
+
+      async function send(e) {
+        e.preventDefault(); setError(''); setResult(null);
+        if (selectedCount === 0) return setError('กรุณาเลือกผู้รับอย่างน้อย 1 คน');
+        if (!subject.trim())    return setError('กรุณาระบุหัวข้ออีเมล');
+        if (!body.trim())       return setError('กรุณาระบุเนื้อหาอีเมล');
+
+        if (!confirm(`ยืนยันการส่งอีเมลหา ${selectedCount} คน?`)) return;
+
+        setSending(true);
+        try {
+          const res = await apiFetch('/api/admin/notify/send', {
+            method: 'POST',
+            body: { to: selectedIds, subject, body },
+          });
+          setResult(res);
+        } catch (err) {
+          setError(err.message || 'ส่งอีเมลไม่สำเร็จ');
+        } finally {
+          setSending(false);
+        }
+      }
+
+      return (
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl border p-6">
+            <h3 className="font-semibold text-gray-800 mb-4">ส่งอีเมลแจ้งเตือน</h3>
+
+            {error && <div className="bg-red-50 text-red-700 text-sm rounded-lg px-4 py-3 mb-4" role="alert">{error}</div>}
+            {result && (
+              <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-4 py-3 mb-4" role="alert">
+                ส่งสำเร็จ {result.sent} คน
+                {result.failed?.length > 0 && ` · ล้มเหลว ${result.failed.length} คน`}
+                {result.failed?.length > 0 && (
+                  <ul className="mt-2 list-disc list-inside text-red-700">
+                    {result.failed.map((f, i) => <li key={i}>{f.email}: {f.error}</li>)}
+                  </ul>
+                )}
+              </div>
+            )}
+
+            {/* ส่วนเลือกผู้รับ */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-medium text-gray-700">
+                  เลือกผู้รับ <span className="text-blue-600 font-semibold">({selectedCount} คน)</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={selectAll} className="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition">เลือกทั้งหมด</button>
+                  <button type="button" onClick={() => selectByRole('student')} className="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition">เฉพาะนักศึกษา</button>
+                  <button type="button" onClick={() => selectByRole('teacher')} className="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition">เฉพาะอาจารย์</button>
+                  <button type="button" onClick={clearAll} className="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition">ล้างการเลือก</button>
+                </div>
+              </div>
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="ค้นหาชื่อหรืออีเมล..."
+                className="w-full border border-gray-300 rounded-xl px-4 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <div className="border border-gray-200 rounded-xl max-h-64 overflow-y-auto">
+                {loading ? (
+                  <div className="p-4 text-sm text-gray-400 text-center">กำลังโหลด...</div>
+                ) : filtered.length === 0 ? (
+                  <div className="p-4 text-sm text-gray-400 text-center">ไม่พบผู้ใช้</div>
+                ) : filtered.map(u => (
+                  <label key={u.UserID} className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 last:border-0 hover:bg-gray-50 cursor-pointer">
+                    <input type="checkbox" checked={!!selected[u.UserID]} onChange={() => toggle(u.UserID)} className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-800 truncate">{u.Name}</div>
+                      <div className="text-xs text-gray-500 truncate">{u.Email}</div>
+                    </div>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{ROLE_LABEL[u.Role] || u.Role}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* ส่วนเขียนอีเมล */}
+            <form onSubmit={send} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">เทมเพลต</label>
+                <select value={template} onChange={e => applyTemplate(e.target.value)}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">— ไม่ใช้เทมเพลต —</option>
+                  {Object.entries(NOTIFY_TEMPLATES).map(([k, t]) => <option key={k} value={k}>{t.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">หัวข้ออีเมล</label>
+                <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="หัวข้ออีเมล" required
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">เนื้อหาอีเมล</label>
+                <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="เนื้อหาอีเมล..." required rows={8}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="flex items-center gap-3">
+                <button type="submit" disabled={sending || selectedCount === 0}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-sm font-medium px-6 py-2.5 rounded-xl transition">
+                  {sending ? 'กำลังส่ง...' : `ส่งอีเมล (หา ${selectedCount} คน)`}
+                </button>
+                <span className="text-xs text-gray-400">ส่งแบบ plain text ผ่าน Resend</span>
+              </div>
+            </form>
+          </div>
         </div>
       );
     }
@@ -1520,6 +1648,7 @@
             {tab === 'users'    && <UsersTab />}
             {tab === 'holidays' && <HolidaysTab />}
             {tab === 'password-requests' && <PasswordRequestsTab />}
+            {tab === 'notify' && <NotifyTab />}
           </main>
         </div>
       );
