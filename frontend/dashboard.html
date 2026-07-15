@@ -33,6 +33,37 @@
   <script type="text/babel">
     const { useState, useEffect } = React;
 
+    function ConfirmModal({ open, title, description, confirmText = 'ยืนยัน', cancelText = 'ยกเลิก', loading = false, onConfirm, onCancel }) {
+      if (!open) return null;
+      return (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden">
+            <div className="p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+                  <p className="mt-3 text-sm leading-6 text-gray-600">{description}</p>
+                </div>
+                <button type="button" onClick={onCancel} className="text-gray-400 hover:text-gray-600 transition" aria-label="ปิด">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="mt-6 flex justify-end gap-3">
+                <button type="button" onClick={onCancel} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
+                  {cancelText}
+                </button>
+                <button type="button" onClick={onConfirm} disabled={loading} className={`rounded-xl px-4 py-2 text-sm font-medium text-white transition ${loading ? 'bg-slate-300' : 'bg-blue-600 hover:bg-blue-700'}`}>
+                  {loading ? 'กำลังดำเนินการ...' : confirmText}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     const STATUS_LABEL = {
       pending:   { label: 'รออนุมัติ',  color: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
       approved:  { label: 'อนุมัติแล้ว', color: 'bg-green-100 text-green-800 border-green-200' },
@@ -194,6 +225,16 @@
       const [loading, setLoading]   = useState(true);
       const [holidays, setHolidays] = useState([]);
       const [showHolidayPopup, setShowHolidayPopup] = useState(false);
+      const [globalError, setGlobalError] = useState('');
+      const [confirmState, setConfirmState] = useState({
+        open: false,
+        title: '',
+        description: '',
+        confirmText: 'ยืนยัน',
+        cancelText: 'ยกเลิก',
+        loading: false,
+        onConfirm: null,
+      });
 
       useEffect(() => {
         requireLogin(['student', 'teacher']).then(u => {
@@ -216,7 +257,7 @@
           setBookings(bookingsData);
           setRooms(roomsData);
         } catch (e) {
-          console.error(e);
+          setGlobalError('ไม่สามารถโหลดข้อมูลได้: ' + (e.message || 'Unknown error'));
         } finally {
           setLoading(false);
         }
@@ -237,14 +278,42 @@
         }
       }
 
-      async function cancelBooking(id) {
-        if (!confirm('ยืนยันการยกเลิกการจองนี้?')) return;
-        try {
-          await apiFetch(`/api/bookings/${id}/cancel`, { method: 'PATCH' });
-          loadData();
-        } catch (e) {
-          alert(e.message);
+      function openConfirm({ title, description, confirmText = 'ยืนยัน', cancelText = 'ยกเลิก', onConfirm }) {
+        setConfirmState({ open: true, title, description, confirmText, cancelText, loading: false, onConfirm });
+      }
+
+      function closeConfirm() {
+        setConfirmState(prev => ({ ...prev, open: false, loading: false, onConfirm: null }));
+      }
+
+      async function handleConfirm() {
+        if (!confirmState.onConfirm) {
+          closeConfirm();
+          return;
         }
+        setConfirmState(prev => ({ ...prev, loading: true }));
+        try {
+          await confirmState.onConfirm();
+        } finally {
+          closeConfirm();
+        }
+      }
+
+      function cancelBooking(id) {
+        openConfirm({
+          title: 'ยืนยันการยกเลิกการจอง',
+          description: 'คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการจองนี้? ข้อมูลการจองจะถูกเปลี่ยนเป็นสถานะยกเลิก',
+          confirmText: 'ยืนยันการยกเลิก',
+          cancelText: 'ยกเลิก',
+          onConfirm: async () => {
+            try {
+              await apiFetch(`/api/bookings/${id}/cancel`, { method: 'PATCH' });
+              await loadData();
+            } catch (e) {
+              setGlobalError('ไม่สามารถยกเลิกการจองได้: ' + (e.message || 'Unknown error'));
+            }
+          }
+        });
       }
 
       function handleBookRoom(room) {
@@ -264,6 +333,18 @@
           <header role="banner">
             <Navbar user={user} />
           </header>
+
+          {globalError && (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+              <div className="bg-red-50 border border-red-200 text-red-700 rounded-2xl px-4 py-3 mb-4 flex items-start justify-between gap-4" role="alert">
+                <div>
+                  <p className="text-sm font-semibold">เกิดข้อผิดพลาด</p>
+                  <p className="mt-1 text-sm">{globalError}</p>
+                </div>
+                <button onClick={() => setGlobalError('')} className="text-red-500 hover:text-red-700 transition" aria-label="ปิดข้อความข้อผิดพลาด">×</button>
+              </div>
+            </div>
+          )}
 
           {/* Holiday Popup */}
           {showHolidayPopup && (
@@ -461,6 +542,17 @@
               )}
             </div>
           </main>
+
+          <ConfirmModal
+            open={confirmState.open}
+            title={confirmState.title}
+            description={confirmState.description}
+            confirmText={confirmState.confirmText}
+            cancelText={confirmState.cancelText}
+            loading={confirmState.loading}
+            onConfirm={handleConfirm}
+            onCancel={closeConfirm}
+          />
         </div>
       );
     }

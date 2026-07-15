@@ -105,22 +105,3 @@ export async function sendReminderEmail(bookingData, env) {
 
   return await sendEmail({ to: bookingData.UserEmail, subject, text }, env);
 }
-
-export async function sendOTPEmail({ to, name, otp }, env) {
-  const subject = 'OTP สำหรับเปลี่ยนรหัสผ่าน';
-  const text = `
-เรียน ${name},
-
-รหัส OTP สำหรับเปลี่ยนรหัสผ่านของคุณคือ:
-
-${otp}
-
-รหัสนี้จะหมดอายุใน 10 นาที
-หากคุณไม่ได้ขอรหัสนี้ กรุณาละเว้น
-
-ขอบคุณ,
-ระบบจองห้อง
-  `.trim();
-
-  return await sendEmail({ to, subject, text }, env);
-}

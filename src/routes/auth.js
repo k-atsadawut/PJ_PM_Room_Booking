@@ -98,22 +98,8 @@ auth.get('/me', requireAuth, (c) => {
 
 // POST /api/auth/change-password
 auth.post('/change-password', requireAuth, async (c) => {
-  const { currentPassword, newPassword, confirmPassword, otpToken } = await c.req.json();
+  const { currentPassword, newPassword, confirmPassword } = await c.req.json();
   const session = c.get('session');
-
-  // Server-side OTP gate: a valid, unused OTP-verified token (issued by
-  // /api/otp/verify) is required. This closes the gap where the client-side
-  // otpVerified flag could be bypassed by calling this endpoint directly.
-  const verifiedRaw = otpToken ? await c.env.SESSIONS.get(`otp-verified:${otpToken}`) : null;
-  if (!verifiedRaw) {
-    return c.json({ error: 'กรุณายืนยัน OTP ก่อนเปลี่ยนรหัสผ่าน' }, 403);
-  }
-  const verifiedData = JSON.parse(verifiedRaw);
-  if (verifiedData.userId !== session.user.id) {
-    return c.json({ error: 'OTP ไม่ตรงกับผู้ใช้' }, 403);
-  }
-  // One-time use: invalidate the token immediately
-  await c.env.SESSIONS.delete(`otp-verified:${otpToken}`);
 
   if (!newPassword || newPassword.length < 6) {
     return c.json({ error: 'รหัสผ่านใหม่ต้องมีความยาวไม่น้อยกว่า 6 ตัวอักษร (FR-19)' }, 400);
