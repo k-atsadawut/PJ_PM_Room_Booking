@@ -118,6 +118,14 @@
                   <div className="text-sm font-medium text-gray-800">{user?.name}</div>
                   <div className="text-xs text-gray-500">{user?.role === 'teacher' ? 'อาจารย์' : 'นักศึกษา'}</div>
                 </div>
+                <a href="/maintenance.html"
+                  className="bg-orange-50 hover:bg-orange-100 text-orange-600 text-sm font-medium px-4 py-2 rounded-xl transition flex items-center gap-2 border border-orange-200">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  แจ้งซ่อม
+                </a>
                 <a href="/booking.html"
                   className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition flex items-center gap-2">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -168,7 +176,7 @@
       );
     }
 
-    function RoomStatusCard({ room, onBook }) {
+    function RoomStatusCard({ room, onBook, onViewDetails }) {
       const statusConfig = {
         available: { 
           label: 'ว่าง', 
@@ -243,6 +251,13 @@
               จองห้องนี้
             </button>
           )}
+
+          <button 
+            onClick={() => onViewDetails(room)}
+            className="w-full mt-2 bg-gray-50 hover:bg-gray-150 text-gray-700 text-sm font-medium py-2 rounded-xl transition border border-gray-200"
+          >
+            ดูรายละเอียดห้อง
+          </button>
         </div>
       );
     }
@@ -264,6 +279,7 @@
       const [upcomingHolidays, setUpcomingHolidays] = useState([]);
       const [showUpcomingHolidaysPopup, setShowUpcomingHolidaysPopup] = useState(false);
       const [globalError, setGlobalError] = useState('');
+      const [selectedDetailRoom, setSelectedDetailRoom] = useState(null);
       const [confirmState, setConfirmState] = useState({
         open: false,
         title: '',
@@ -552,7 +568,7 @@
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   {rooms.slice(0, 4).map(room => (
-                    <RoomStatusCard key={room.RoomID} room={room} onBook={handleBookRoom} />
+                    <RoomStatusCard key={room.RoomID} room={room} onBook={handleBookRoom} onViewDetails={setSelectedDetailRoom} />
                   ))}
                 </div>
               </div>
@@ -667,6 +683,73 @@
             onConfirm={handleConfirm}
             onCancel={closeConfirm}
           />
+
+          {/* Room Details Modal */}
+          {selectedDetailRoom && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 relative">
+                <button
+                  onClick={() => setSelectedDetailRoom(null)}
+                  className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"
+                  aria-label="ปิด"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-800">{selectedDetailRoom.RoomName}</h3>
+                    <p className="text-sm text-gray-500">ความจุ {selectedDetailRoom.Capacity} คน</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">รายละเอียด / อุปกรณ์</span>
+                    <p className="text-sm text-gray-600 mt-1 leading-relaxed">
+                      {selectedDetailRoom.Description || 'ไม่มีข้อมูลรายละเอียดอุปกรณ์ประจำห้อง'}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">สถานะการจองในวันนี้</span>
+                    {selectedDetailRoom.bookings_today && selectedDetailRoom.bookings_today.length > 0 ? (
+                      <div className="space-y-2 mt-2">
+                        {selectedDetailRoom.bookings_today.map((bk, i) => (
+                          <div key={i} className="flex items-center justify-between text-xs bg-gray-50 rounded-xl px-3 py-2.5">
+                            <span className="text-gray-600 font-mono font-medium">{bk.start} - {bk.end}</span>
+                            <span className={`px-2 py-0.5 rounded-full ${STATUS_LABEL[bk.status]?.color}`}>
+                              {STATUS_LABEL[bk.status]?.label}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-green-600 mt-2 flex items-center gap-1.5">
+                        <span className="w-2 h-2 bg-green-500 rounded-full inline-block"></span>
+                        ว่างตลอดทั้งวันนี้
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <button
+                    onClick={() => setSelectedDetailRoom(null)}
+                    className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 rounded-xl transition-all"
+                  >
+                    ปิดหน้าต่าง
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       );
     }

@@ -37,4 +37,45 @@ maintenance.get('/', requireAuth, async (c) => {
   return c.json(result);
 });
 
+// GET /api/maintenance/admin — ดูรายงานทั้งหมด (Admin only)
+maintenance.get('/admin', requireAuth, async (c) => {
+  const session = c.get('session');
+  if (session.user.role !== 'admin') {
+    return c.json({ error: 'ไม่มีสิทธิ์เข้าถึง' }, 403);
+  }
+
+  const result = await executeQuery(`
+    SELECT mr.*, r.RoomName, u.Name AS ReporterName
+    FROM maintenance_reports mr
+    JOIN rooms r ON mr.RoomID = r.RoomID
+    JOIN users u ON mr.UserID = u.UserID
+    ORDER BY mr.ReportDate DESC
+  `, [], c.env);
+
+  return c.json(result);
+});
+
+// PATCH /api/maintenance/:id — อัปเดตสถานะ (Admin only)
+maintenance.patch('/:id', requireAuth, async (c) => {
+  const session = c.get('session');
+  if (session.user.role !== 'admin') {
+    return c.json({ error: 'ไม่มีสิทธิ์เข้าถึง' }, 403);
+  }
+
+  const reportId = c.req.param('id');
+  const { status, notes } = await c.req.json();
+
+  if (!['pending', 'in_progress', 'completed', 'rejected'].includes(status)) {
+    return c.json({ error: 'สถานะไม่ถูกต้อง' }, 400);
+  }
+
+  await executeQuery(
+    'UPDATE maintenance_reports SET Status = ?, Notes = ?, UpdatedDate = CURRENT_TIMESTAMP WHERE ReportID = ?',
+    [status, notes || null, reportId],
+    c.env
+  );
+
+  return c.json({ success: true });
+});
+
 export default maintenance;

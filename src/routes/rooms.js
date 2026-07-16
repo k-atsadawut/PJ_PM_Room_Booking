@@ -17,15 +17,15 @@ rooms.get('/', requireAuth, async (c) => {
 
 // POST /api/rooms — เพิ่มห้อง (admin only)
 rooms.post('/', requireAdmin, async (c) => {
-  const { RoomName, Capacity, Status } = await c.req.json();
+  const { RoomName, Capacity, Status, Description } = await c.req.json();
   
   if (!RoomName) {
     return c.json({ error: 'กรุณาระบุชื่อห้อง' }, 400);
   }
 
   const result = await executeQuery(
-    'INSERT INTO rooms (RoomName, Capacity, Status) VALUES (?, ?, ?)',
-    [RoomName, Capacity || 1, Status || 'available'],
+    'INSERT INTO rooms (RoomName, Capacity, Status, Description) VALUES (?, ?, ?, ?)',
+    [RoomName, Capacity || 1, Status || 'available', Description || null],
     c.env
   );
 
@@ -35,7 +35,7 @@ rooms.post('/', requireAdmin, async (c) => {
 // PATCH /api/rooms/:id — แก้ไขห้อง (admin only)
 rooms.patch('/:id', requireAdmin, async (c) => {
   const roomId = c.req.param('id');
-  const { RoomName, Capacity, Status } = await c.req.json();
+  const { RoomName, Capacity, Status, Description } = await c.req.json();
 
   const updates = [];
   const values = [];
@@ -51,6 +51,10 @@ rooms.patch('/:id', requireAdmin, async (c) => {
   if (Status !== undefined) {
     updates.push('Status = ?');
     values.push(Status);
+  }
+  if (Description !== undefined) {
+    updates.push('Description = ?');
+    values.push(Description);
   }
 
   if (updates.length === 0) {

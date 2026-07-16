@@ -13,6 +13,7 @@ router.get('/', async (req, res) => {
       r.RoomName,
       r.Capacity,
       r.Status,
+      r.Description,
       JSON_ARRAYAGG(
         IF(b.BookingID IS NOT NULL,
           JSON_OBJECT(
@@ -53,7 +54,7 @@ router.get('/', async (req, res) => {
 
 // POST /api/rooms — เพิ่มห้อง (Admin only)
 router.post('/', requireAuth, async (req, res) => {
-  const { RoomName, Capacity, Status } = req.body;
+  const { RoomName, Capacity, Status, Description } = req.body;
 
   // Check if user is admin
   if (req.session.user.role !== 'admin') {
@@ -73,8 +74,8 @@ router.post('/', requireAuth, async (req, res) => {
 
   try {
     await db.execute(
-      'INSERT INTO rooms (RoomName, Capacity, Status) VALUES (?, ?, ?)',
-      [RoomName, 1, Status || 'available']
+      'INSERT INTO rooms (RoomName, Capacity, Status, Description) VALUES (?, ?, ?, ?)',
+      [RoomName, 1, Status || 'available', Description || null]
     );
     res.json({ success: true });
   } catch (err) {
@@ -85,7 +86,7 @@ router.post('/', requireAuth, async (req, res) => {
 // PUT /api/rooms/:id — แก้ไขห้อง (Admin only)
 router.put('/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
-  const { RoomName, Capacity, Status } = req.body;
+  const { RoomName, Capacity, Status, Description } = req.body;
 
   // Check if user is admin
   if (req.session.user.role !== 'admin') {
@@ -99,8 +100,8 @@ router.put('/:id', requireAuth, async (req, res) => {
 
   try {
     await db.execute(
-      'UPDATE rooms SET RoomName = ?, Capacity = ?, Status = ?, updated_at = CURRENT_TIMESTAMP WHERE RoomID = ?',
-      [RoomName, 1, Status, id]
+      'UPDATE rooms SET RoomName = ?, Capacity = ?, Status = ?, Description = ?, updated_at = CURRENT_TIMESTAMP WHERE RoomID = ?',
+      [RoomName, 1, Status, Description || null, id]
     );
     res.json({ success: true });
   } catch (err) {
