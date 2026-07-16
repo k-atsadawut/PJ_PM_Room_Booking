@@ -14,16 +14,7 @@ router.post('/login', async (req, res) => {
     return res.status(400).json({ error: 'กรุณากรอกอีเมลและรหัสผ่าน' });
   }
 
-  // Check if today is a holiday
-  const [holidays] = await db.execute(
-    'SELECT HolidayID, Description FROM holidays WHERE HolidayDate = CURDATE() LIMIT 1'
-  );
-  if (holidays.length > 0) {
-    return res.status(403).json({ 
-      error: `วันนี้เป็นวันหยุด (${holidays[0].Description || 'วันหยุดพิเศษ'}) ระบบไม่เปิดให้ใช้งาน`,
-      isHoliday: true
-    });
-  }
+
 
   const [rows] = await db.execute(
     'SELECT * FROM users WHERE Email = ? LIMIT 1', [email]
