@@ -2,6 +2,8 @@ import { Hono } from 'hono';
 import { requireAuth } from '../middleware/auth';
 import { executeQuery } from '../config/db';
 
+import { notifyAdminMaintenance } from '../utils/mailer';
+
 const maintenance = new Hono();
 
 // POST /api/maintenance — แจ้งปัญหา/ซ่อมบำรุง
@@ -21,6 +23,35 @@ maintenance.post('/', requireAuth, async (c) => {
     [RoomID, session.user.id, Description, Urgency || 'normal', 'pending'],
     c.env
   );
+
+  try {
+    const room = await executeQuery('SELECT RoomName FROM rooms WHERE RoomID = ?', [RoomID], c.env);
+    const roomName = room[0]?.RoomName || RoomID;
+    const admins = await executeQuery("SELECT UserID, Email FROM users WHERE Role = 'admin'", [], c.env);
+
+    if (admins.length > 0) {
+      for (const admin of admins) {
+        // บันทึกการแจ้งเตือนลง DB
+        await executeQuery(
+          'INSERT INTO notifications (UserID, BookingID, Message) VALUES (?, NULL, ?)',
+          [admin.UserID, `มีการแจ้งซ่อมห้อง ${roomName}: ${Description.slice(0, 50)} รอการตรวจสอบ`],
+          c.env
+        );
+
+        // ส่งอีเมลแจ้งเตือน
+        if (admin.Email) {
+          notifyAdminMaintenance({
+            RoomName: roomName,
+            ReporterName: session.user.name,
+            Description,
+            Urgency
+          }, admin.Email, c.env).catch(err => console.error('Email error:', err));
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error notifying admins:', err);
+  }
 
   return c.json({ success: true, reportId: result.insertId });
 });

@@ -105,3 +105,19 @@ export async function sendReminderEmail(bookingData, env) {
 
   return await sendEmail({ to: bookingData.UserEmail, subject, text }, env);
 }
+
+export async function notifyAdminMaintenance(reportData, adminEmail, env) {
+  const subject = `แจ้งซ่อมห้อง ${reportData.RoomName}`;
+  const text = `
+มีรายงานการแจ้งซ่อมใหม่:
+
+ห้อง: ${reportData.RoomName}
+ผู้แจ้ง: ${reportData.ReporterName}
+รายละเอียด: ${reportData.Description}
+ความเร่งด่วน: ${reportData.Urgency === 'urgent' ? 'ด่วนที่สุด' : 'ปกติ'}
+
+กรุณาเข้าสู่ระบบเพื่อตรวจสอบ
+  `.trim();
+
+  return await sendEmail({ to: adminEmail, subject, text }, env);
+}

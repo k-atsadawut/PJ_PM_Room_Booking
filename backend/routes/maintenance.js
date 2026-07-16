@@ -20,7 +20,7 @@ router.post('/', requireAuth, async (req, res) => {
     `, [req.session.user.id, roomId, description, urgency || 'normal']);
 
     // แจ้ง Admin
-    const [admins] = await db.execute("SELECT Email FROM users WHERE Role = 'admin'");
+    const [admins] = await db.execute("SELECT UserID, Email FROM users WHERE Role = 'admin'");
     const [room] = await db.execute("SELECT RoomName FROM rooms WHERE RoomID = ?", [roomId]);
     const roomName = room[0]?.RoomName || roomId;
 
@@ -37,11 +37,18 @@ router.post('/', requireAuth, async (req, res) => {
 กรุณาเข้าสู่ระบบเพื่อตรวจสอบ
       `.trim();
 
-      admins.forEach(admin => {
+      for (const admin of admins) {
+        // บันทึกแจ้งเตือนลง DB
+        await db.execute(
+          'INSERT INTO notifications (UserID, BookingID, Message) VALUES (?, NULL, ?)',
+          [admin.UserID, `มีการแจ้งซ่อมห้อง ${roomName}: ${description.slice(0, 50)} รอการตรวจสอบ`]
+        );
+
+        // ส่งอีเมล
         if (admin.Email) {
           sendEmail({ to: admin.Email, subject, text }).catch(err => console.error('Email error:', err));
         }
-      });
+      }
     }
 
     res.json({ success: true, reportId: result.insertId });
