@@ -1994,6 +1994,7 @@
       const [loading, setLoading] = useState(true);
       const [filter, setFilter] = useState('all'); // all, pending, in_progress, completed, rejected
       const [notesInput, setNotesInput] = useState({});
+      const [updatingId, setUpdatingId] = useState(null);
 
       useEffect(() => {
         loadReports();
@@ -2012,15 +2013,23 @@
 
       async function updateStatus(reportId, newStatus) {
         const notes = notesInput[reportId] || '';
+        
+        // Optimistic UI Update: update locally first for instant response
+        setReports(prev => prev.map(r => r.ReportID === reportId ? { ...r, Status: newStatus, Notes: notes } : r));
+        setUpdatingId(reportId);
+
         try {
           await apiFetch(`/api/maintenance/${reportId}`, {
             method: 'PATCH',
             body: { status: newStatus, notes }
           });
-          // Refresh list
+          // Refresh from server to stay in sync
           await loadReports();
         } catch (e) {
           setGlobalError('ไม่สามารถอัปเดตสถานะได้: ' + (e.message || 'Unknown error'));
+          loadReports(); // Revert state from server
+        } finally {
+          setUpdatingId(null);
         }
       }
 
@@ -2087,22 +2096,28 @@
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex flex-col gap-2 min-w-[200px]">
+                        <div className="flex flex-col gap-2 min-w-[220px]">
                           <input type="text" placeholder="ใส่บันทึก/หมายเหตุ..." 
                             value={notesInput[r.ReportID] || r.Notes || ''} 
                             onChange={e => setNotesInput(prev => ({ ...prev, [r.ReportID]: e.target.value }))}
-                            className="w-full border border-gray-300 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                          <div className="flex gap-1.5">
-                            {['in_progress', 'completed', 'rejected'].map(st => (
-                              <button key={st} onClick={() => updateStatus(r.ReportID, st)}
-                                className={`px-2 py-1 text-[10px] rounded font-medium text-white transition ${
-                                  st === 'in_progress' ? 'bg-blue-600 hover:bg-blue-700' :
-                                  st === 'completed' ? 'bg-green-600 hover:bg-green-700' :
-                                  'bg-red-600 hover:bg-red-700'
-                                }`}>
-                                {st === 'in_progress' ? 'กำลังทำ' : st === 'completed' ? 'เสร็จ' : 'ปฏิเสธ'}
-                              </button>
-                            ))}
+                            className="w-full border border-gray-300 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" />
+                          <div className="flex gap-1">
+                            {[
+                              ['in_progress', 'กำลังทำ', 'bg-blue-600 hover:bg-blue-700'], 
+                              ['completed', 'เสร็จสิ้น', 'bg-green-600 hover:bg-green-700'], 
+                              ['rejected', 'ปฏิเสธ', 'bg-red-600 hover:bg-red-700']
+                            ].map(([st, label, btnColor]) => {
+                              const isCurrent = r.Status === st;
+                              const isUpdating = updatingId === r.ReportID;
+                              return (
+                                <button key={st} 
+                                  onClick={() => updateStatus(r.ReportID, st)}
+                                  disabled={isUpdating || isCurrent}
+                                  className={`flex-1 py-1 px-1.5 text-[10px] rounded-lg font-semibold text-white transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none ${btnColor}`}>
+                                  {isUpdating && isCurrent ? '...' : label}
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
                       </td>
