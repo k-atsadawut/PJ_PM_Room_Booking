@@ -247,6 +247,13 @@
       );
     }
 
+    function formatThaiDate(dateString, dateStyle = 'long') {
+      if (!dateString) return '';
+      // Extract YYYY-MM-DD to avoid timezone shift and parse invalid dates
+      const cleanDate = String(dateString).slice(0, 10);
+      return new Date(cleanDate + 'T00:00:00').toLocaleDateString('th-TH', { dateStyle });
+    }
+
     function Dashboard() {
       const [user, setUser]         = useState(null);
       const [bookings, setBookings] = useState([]);
@@ -361,7 +368,7 @@
       if (!user) return <div className="text-center mt-20 text-gray-400">กำลังโหลด...</div>;
 
       const stats = {
-        todayBookings: bookings.filter(b => b.Status === 'approved' && new Date(b.BookingDate + 'T00:00:00').toDateString() === new Date().toDateString()).length,
+        todayBookings: bookings.filter(b => b.Status === 'approved' && new Date(String(b.BookingDate).slice(0, 10) + 'T00:00:00').toDateString() === new Date().toDateString()).length,
         pending: bookings.filter(b => b.Status === 'pending').length,
         approved: bookings.filter(b => b.Status === 'approved').length,
       };
@@ -410,7 +417,7 @@
                       </div>
                       <div className="flex-1 text-left">
                         <div className="font-bold text-gray-800 text-sm">
-                          {new Date(h.HolidayDate + 'T00:00:00').toLocaleDateString('th-TH', { dateStyle: 'long' })}
+                          {formatThaiDate(h.HolidayDate)}
                         </div>
                         {h.Description && (
                           <div className="text-xs text-gray-500 mt-1">{h.Description}</div>
@@ -456,7 +463,7 @@
                       </div>
                       <div className="flex-1">
                         <div className="font-bold text-gray-800 text-sm">
-                          {new Date(h.HolidayDate + 'T00:00:00').toLocaleDateString('th-TH', { dateStyle: 'long' })}
+                          {formatThaiDate(h.HolidayDate)}
                         </div>
                         {h.Description && (
                           <div className="text-xs text-gray-500 mt-1">{h.Description}</div>
@@ -617,11 +624,11 @@
                               <td className="px-4 sm:px-6 py-3 sm:py-4">
                                 <div className="font-medium text-gray-800 text-sm sm:text-base">{b.RoomName}</div>
                                 <div className="text-[11px] text-gray-400 sm:hidden mt-0.5">
-                                  {new Date(b.BookingDate + 'T00:00:00').toLocaleDateString('th-TH', { dateStyle: 'long' })}
+                                  {formatThaiDate(b.BookingDate)}
                                 </div>
                               </td>
                               <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 hidden sm:table-cell">
-                                {new Date(b.BookingDate + 'T00:00:00').toLocaleDateString('th-TH', { dateStyle: 'long' })}
+                                {formatThaiDate(b.BookingDate)}
                               </td>
                               <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-600">
                                 {b.StartTime}–{b.EndTime}
