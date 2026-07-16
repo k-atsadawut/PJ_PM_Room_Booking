@@ -288,7 +288,7 @@
       const stats = React.useMemo(() => ({
         availableRooms: rooms.filter(r => r.Status === 'available').length,
         pending: bookings.filter(b => b.Status === 'pending').length,
-        approvedToday: bookings.filter(b => b.Status === 'approved' && new Date(b.BookingDate).toDateString() === new Date().toDateString()).length,
+        approvedToday: bookings.filter(b => b.Status === 'approved' && new Date(b.BookingDate + 'T00:00:00').toDateString() === new Date().toDateString()).length,
         blockedAccounts: users.filter(u => u.failed_login_count >= 10).length,
       }), [rooms, bookings, users]);
 
@@ -427,7 +427,7 @@
                 const currentBooking = bookings.find(b => 
                   b.Status === 'approved' && 
                   b.RoomID === room.RoomID && 
-                  new Date(b.BookingDate).toDateString() === new Date().toDateString()
+                  new Date(b.BookingDate + 'T00:00:00').toDateString() === new Date().toDateString()
                 );
                 const statusConfig = {
                   available: { 
@@ -543,7 +543,7 @@
                           <span className="font-medium">{b.UserName}</span> {config.label} สำหรับ {b.RoomName}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          {new Date(b.BookingDate).toLocaleDateString('th-TH', { dateStyle: 'short' })} · {b.StartTime}–{b.EndTime}
+                          {new Date(b.BookingDate + 'T00:00:00').toLocaleDateString('th-TH', { dateStyle: 'medium' })} · {b.StartTime}–{b.EndTime}
                         </div>
                       </div>
                       <span className="text-xs text-gray-400">{new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</span>
@@ -755,9 +755,12 @@
                       <tr key={b.BookingID} className="hover:bg-gray-50">
                         <td className="px-6 py-4">
                           <div className="font-medium text-gray-800">{b.RoomName}</div>
+                          <div className="text-[11px] text-gray-400 sm:hidden mt-0.5">
+                            {new Date(b.BookingDate + 'T00:00:00').toLocaleDateString('th-TH', { dateStyle: 'long' })}
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500 hidden sm:table-cell">
-                          {new Date(b.BookingDate).toLocaleDateString('th-TH', { dateStyle: 'medium' })}
+                          {new Date(b.BookingDate + 'T00:00:00').toLocaleDateString('th-TH', { dateStyle: 'long' })}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">
                           {b.StartTime}–{b.EndTime}
@@ -821,7 +824,7 @@
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">วันที่:</span>
-                    <span className="font-medium text-gray-800">{new Date(viewBooking.BookingDate).toLocaleDateString('th-TH', { dateStyle: 'long' })}</span>
+                    <span className="font-medium text-gray-800">{new Date(viewBooking.BookingDate + 'T00:00:00').toLocaleDateString('th-TH', { dateStyle: 'long' })}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">เวลา:</span>
@@ -1016,7 +1019,7 @@
                               <span className="font-medium">{b.UserName}</span> {config.label} สำหรับ {b.RoomName}
                             </div>
                             <div className="text-xs text-gray-500">
-                              {new Date(b.BookingDate).toLocaleDateString('th-TH', { dateStyle: 'short' })} · {b.StartTime}–{b.EndTime}
+                              {new Date(b.BookingDate + 'T00:00:00').toLocaleDateString('th-TH', { dateStyle: 'medium' })} · {b.StartTime}–{b.EndTime}
                             </div>
                           </div>
                           <span className={`text-xs font-medium px-2 py-1 rounded-full border ${STATUS[b.Status]?.color}`}>
@@ -1608,7 +1611,7 @@
 
         // Optimistic UI update - add to UI immediately and sort by date descending
         const tempHoliday = { HolidayID: Date.now(), HolidayDate: date, Description: desc };
-        setHolidays(prev => [tempHoliday, ...prev].sort((a, b) => new Date(b.HolidayDate) - new Date(a.HolidayDate)));
+        setHolidays(prev => [tempHoliday, ...prev].sort((a, b) => new Date(b.HolidayDate + 'T00:00:00') - new Date(a.HolidayDate + 'T00:00:00')));
         
         const tempDate = date;
         const tempDesc = desc;
@@ -1682,7 +1685,7 @@
                     </div>
                     <div>
                       <span className="font-medium text-gray-800">
-                        {new Date(h.HolidayDate).toLocaleDateString('th-TH', { dateStyle: 'long' })}
+                        {new Date(h.HolidayDate + 'T00:00:00').toLocaleDateString('th-TH', { dateStyle: 'long' })}
                       </span>
                       {h.Description && <span className="text-sm text-gray-500 ml-2">— {h.Description}</span>}
                     </div>
