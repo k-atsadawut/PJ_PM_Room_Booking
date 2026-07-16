@@ -97,19 +97,26 @@ maintenance.patch('/:id', requireAuth, async (c) => {
   }
 
   const reportId = c.req.param('id');
-  const { status, notes } = await c.req.json();
+  try {
+    const body = await c.req.json();
+    const status = body.status || body.Status;
+    const notes = body.notes || body.Notes;
 
-  if (!['pending', 'in_progress', 'completed', 'rejected'].includes(status)) {
-    return c.json({ error: 'สถานะไม่ถูกต้อง' }, 400);
+    if (!['pending', 'in_progress', 'completed', 'rejected'].includes(status)) {
+      return c.json({ error: 'สถานะไม่ถูกต้อง: ' + status }, 400);
+    }
+
+    await executeQuery(
+      'UPDATE maintenance_reports SET Status = ?, Notes = ?, UpdatedDate = CURRENT_TIMESTAMP WHERE ReportID = ?',
+      [status, notes || null, reportId],
+      c.env
+    );
+
+    return c.json({ success: true });
+  } catch (err) {
+    console.error('PATCH maintenance error:', err);
+    return c.json({ error: 'เกิดข้อผิดพลาด: ' + err.message }, 500);
   }
-
-  await executeQuery(
-    'UPDATE maintenance_reports SET Status = ?, Notes = ?, UpdatedDate = CURRENT_TIMESTAMP WHERE ReportID = ?',
-    [status, notes || null, reportId],
-    c.env
-  );
-
-  return c.json({ success: true });
 });
 
 export default maintenance;
