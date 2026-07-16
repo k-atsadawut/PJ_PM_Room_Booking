@@ -97,7 +97,7 @@
         try {
           const res = await apiFetch('/api/maintenance', {
             method: 'POST',
-            body: JSON.stringify({ roomId, description, urgency }),
+            body: { roomId, description, urgency },
           });
 
           if (res.success) {

@@ -7,7 +7,10 @@ const maintenance = new Hono();
 // POST /api/maintenance — แจ้งปัญหา/ซ่อมบำรุง
 maintenance.post('/', requireAuth, async (c) => {
   const session = c.get('session');
-  const { RoomID, Description, Urgency } = await c.req.json();
+  const body = await c.req.json();
+  const RoomID = body.RoomID || body.roomId;
+  const Description = body.Description || body.description;
+  const Urgency = body.Urgency || body.urgency;
 
   if (!RoomID || !Description) {
     return c.json({ error: 'กรุณาระบุห้องและรายละเอียดปัญหา' }, 400);
