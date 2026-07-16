@@ -102,6 +102,13 @@
   --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.5);
 }
 
+/* ─── Global Light Mode Theme Adjustments ─── */
+html:not(.dark) .border,
+html:not(.dark) .border-gray-200,
+html:not(.dark) .border-gray-100 {
+  border-color: #cbd5e1 !important; /* Higher contrast gray for sharp borders */
+}
+
 /* ─── Global Dark Mode Theme Overrides ─── */
 .dark body {
   background-color: #0f172a !important;
@@ -142,10 +149,38 @@
   color: #94a3b8 !important;
 }
 
+/* Guarantee text inside dark card wrappers and tables is visible */
+.dark .bg-white p,
+.dark .bg-white span,
+.dark .bg-white div,
+.dark .bg-white td,
+.dark .bg-white th {
+  color: #e2e8f0;
+}
+
+.dark table th,
+.dark table td {
+  color: #e2e8f0;
+}
+
+.dark nav button,
+.dark nav a,
+.dark header nav button,
+.dark header nav a {
+  color: #94a3b8;
+}
+
+.dark nav button.nav-active,
+.dark nav a.bg-blue-600,
+.dark header nav button.nav-active,
+.dark header nav a.bg-blue-600 {
+  color: #ffffff !important;
+}
+
 .dark .border-gray-200, 
 .dark .border-gray-100,
 .dark .border,
-.dark border-2 {
+.dark .border-2 {
   border-color: #334155 !important;
 }
 
@@ -199,4 +234,98 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ─── Dark Mode High-Contrast Semantic Overrides ─── */
+
+/* Approved / Available / Success (Green) */
+.dark .bg-green-100 {
+  background-color: rgba(34, 197, 94, 0.15) !important;
+}
+.dark .text-green-800,
+.dark .text-green-700,
+.dark .text-green-600 {
+  color: #4ade80 !important;
+}
+.dark .border-green-200 {
+  border-color: rgba(34, 197, 94, 0.3) !important;
+}
+
+/* Pending / Warning / Maintenance (Yellow) */
+.dark .bg-yellow-100,
+.dark .bg-yellow-50,
+.dark .bg-amber-100,
+.dark .bg-amber-50 {
+  background-color: rgba(234, 179, 8, 0.15) !important;
+}
+.dark .text-yellow-800,
+.dark .text-yellow-700,
+.dark .text-yellow-600,
+.dark .text-amber-800,
+.dark .text-amber-700 {
+  color: #facc15 !important;
+}
+.dark .border-yellow-200,
+.dark .border-amber-200 {
+  border-color: rgba(234, 179, 8, 0.3) !important;
+}
+
+/* Rejected / Cancelled / Danger (Red) */
+.dark .bg-red-100,
+.dark .bg-red-50 {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+}
+.dark .text-red-800,
+.dark .text-red-700,
+.dark .text-red-600 {
+  color: #f87171 !important;
+}
+.dark .border-red-200 {
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+/* Cancelled / Neutral / Gray Badges */
+.dark .bg-gray-100,
+.dark .bg-slate-100 {
+  background-color: rgba(148, 163, 184, 0.15) !important;
+}
+.dark .text-gray-800,
+.dark .text-gray-600,
+.dark .text-slate-600 {
+  color: #94a3b8 !important;
+}
+.dark .border-gray-200,
+.dark .border-slate-200 {
+  border-color: rgba(148, 163, 184, 0.25) !important;
+}
+
+/* Blue Highlights / Badges */
+.dark .bg-blue-100,
+.dark .bg-blue-50 {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+}
+.dark .text-blue-800,
+.dark .text-blue-700,
+.dark .text-blue-600 {
+  color: #60a5fa !important;
+}
+.dark .border-blue-200 {
+  border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+/* Admin Dashboard Time Container Gradient */
+.dark .bg-gradient-to-r.from-blue-50.to-indigo-50 {
+  background-image: none !important;
+  background-color: rgba(30, 41, 59, 0.6) !important;
+  border-color: #334155 !important;
+}
+.dark .bg-gradient-to-r.from-blue-50.to-indigo-50 * {
+  color: #f8fafc !important;
+}
+.dark .bg-gradient-to-r.from-blue-50.to-indigo-50 .text-blue-600 {
+  color: #60a5fa !important;
+}
+.dark .bg-gradient-to-r.from-blue-50.to-indigo-50 .bg-blue-200 {
+  background-color: #334155 !important;
+}
+
 
