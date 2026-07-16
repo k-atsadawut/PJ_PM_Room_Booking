@@ -2101,23 +2101,31 @@
                             value={notesInput[r.ReportID] || r.Notes || ''} 
                             onChange={e => setNotesInput(prev => ({ ...prev, [r.ReportID]: e.target.value }))}
                             className="w-full border border-gray-300 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" />
-                          <div className="flex gap-1">
-                            {[
-                              ['in_progress', 'กำลังทำ', 'bg-blue-600 hover:bg-blue-700'], 
-                              ['completed', 'เสร็จสิ้น', 'bg-green-600 hover:bg-green-700'], 
-                              ['rejected', 'ปฏิเสธ', 'bg-red-600 hover:bg-red-700']
-                            ].map(([st, label, btnColor]) => {
-                              const isCurrent = r.Status === st;
-                              const isUpdating = updatingId === r.ReportID;
-                              return (
-                                <button key={st} 
-                                  onClick={() => updateStatus(r.ReportID, st)}
-                                  disabled={isUpdating || isCurrent}
-                                  className={`flex-1 py-1 px-1.5 text-[10px] rounded-lg font-semibold text-white transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none ${btnColor}`}>
-                                  {isUpdating && isCurrent ? '...' : label}
-                                </button>
-                              );
-                            })}
+                          <div className="relative">
+                            <select
+                              value={r.Status}
+                              disabled={updatingId === r.ReportID}
+                              onChange={e => updateStatus(r.ReportID, e.target.value)}
+                              className={`w-full border rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all cursor-pointer ${
+                                r.Status === 'pending' ? 'bg-yellow-50 text-yellow-800 border-yellow-200' :
+                                r.Status === 'in_progress' ? 'bg-blue-50 text-blue-800 border-blue-200' :
+                                r.Status === 'completed' ? 'bg-green-50 text-green-800 border-green-200' :
+                                'bg-red-50 text-red-800 border-red-200'
+                              }`}
+                            >
+                              <option value="pending" className="bg-white text-gray-800 font-semibold">รอดำเนินการ</option>
+                              <option value="in_progress" className="bg-white text-gray-800 font-semibold">กำลังดำเนินการ</option>
+                              <option value="completed" className="bg-white text-gray-800 font-semibold">เสร็จสิ้น</option>
+                              <option value="rejected" className="bg-white text-gray-800 font-semibold">ถูกปฏิเสธ</option>
+                            </select>
+                            {updatingId === r.ReportID && (
+                              <div className="absolute right-2.5 top-1.5">
+                                <svg className="animate-spin h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                </svg>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
