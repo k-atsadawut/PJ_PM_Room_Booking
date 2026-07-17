@@ -49,11 +49,17 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/login.html'));
 });
 
+// Export app เพื่อใช้ใน integration test (boot บน port ทดสอบเอง)
+module.exports = app;
+
 // ─── Start ─────────────────────────────────────────────────────
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
-  
-  // FR-10: เริ่ม scheduler แจ้งเตือนก่อนถึงเวลาจอง
-  startReminderScheduler();
-});
+// รันเฉพาะเมื่อเรียกตรง (node server.js) ไม่ใช่ตอน require ใน test
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running at http://localhost:${PORT}`);
+
+    // FR-10: เริ่ม scheduler แจ้งเตือนก่อนถึงเวลาจอง
+    startReminderScheduler();
+  });
+}

@@ -2,66 +2,74 @@ import { Hono } from 'hono';
 import { requireAuth } from '../middleware/auth';
 import { createSession, destroySession, getSession } from '../middleware/session';
 import { hashPassword, verifyPassword } from '../utils/password';
+import { evaluateLoginAttempt, DEFAULT_MAX_ATTEMPTS, DEFAULT_LOCK_MINUTES } from '../utils/authLock';
 import { executeQuery } from '../config/db';
 
 const auth = new Hono();
 
-const MAX_ATTEMPTS = 10;
-const LOCK_MINUTES = 360;
-
 // POST /api/auth/login
 auth.post('/login', async (c) => {
   const { email, password } = await c.req.json();
-  
+
   if (!email || !password) {
     return c.json({ error: 'กรุณากรอกอีเมลและรหัสผ่าน' }, 400);
   }
+
+  // FR-19: อ่าน config จาก env (wrangler.toml [vars]) — ไม่ hardcode
+  const maxAttempts = Number(c.env?.MAX_LOGIN_ATTEMPTS) || DEFAULT_MAX_ATTEMPTS;
+  const lockMinutes = Number(c.env?.LOGIN_LOCK_MINUTES) || DEFAULT_LOCK_MINUTES;
 
   const users = await executeQuery(
     'SELECT * FROM users WHERE Email = ? LIMIT 1',
     [email],
     c.env
   );
-  
+
   const user = users[0];
 
   if (!user) {
     return c.json({ error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' }, 401);
   }
 
-  // Check if account is locked
-  if (user.locked_until && new Date() < new Date(user.locked_until)) {
-    const unlockTime = new Date(user.locked_until).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-    return c.json({ error: `บัญชีถูกล็อก กรุณารอจนถึง ${unlockTime} น.` }, 403);
-  }
+  const passwordValid = await verifyPassword(password, user.Password);
 
-  const valid = await verifyPassword(password, user.Password);
+  const result = evaluateLoginAttempt({
+    user,
+    passwordValid,
+    now: new Date(),
+    maxAttempts,
+    lockMinutes,
+  });
 
-  if (!valid) {
-    const attempts = (user.failed_login_count || 0) + 1;
-    const lockedUntil = attempts >= MAX_ATTEMPTS
-      ? new Date(Date.now() + LOCK_MINUTES * 60 * 1000).toISOString()
-      : null;
-
+  // ── เขียน DB state ตามผล ──
+  if (result.action === 'allow' && result.shouldResetCount) {
     await executeQuery(
-      'UPDATE users SET failed_login_count = ?, locked_until = ? WHERE UserID = ?',
-      [attempts >= MAX_ATTEMPTS ? 0 : attempts, lockedUntil, user.UserID],
+      'UPDATE users SET failed_login_count = 0, locked_until = NULL WHERE UserID = ?',
+      [user.UserID],
       c.env
     );
-
-    if (attempts >= MAX_ATTEMPTS) {
-      return c.json({ error: `กรอกรหัสผ่านผิด ${MAX_ATTEMPTS} ครั้ง บัญชีถูกล็อก ${LOCK_MINUTES / 60} ชั่วโมง` }, 403);
-    }
-
-    return c.json({ error: `อีเมลหรือรหัสผ่านไม่ถูกต้อง (${attempts}/${MAX_ATTEMPTS})` }, 401);
+  } else if (result.action === 'lock' && result.shouldResetCount) {
+    await executeQuery(
+      'UPDATE users SET failed_login_count = 0, locked_until = ? WHERE UserID = ?',
+      [result.lockedUntil, user.UserID],
+      c.env
+    );
+  } else if (result.action === 'reject') {
+    const expectedCount = Number(user.failed_login_count) || 0;
+    await executeQuery(
+      'UPDATE users SET failed_login_count = ? WHERE UserID = ? AND failed_login_count = ?',
+      [result.attempts, user.UserID, expectedCount],
+      c.env
+    );
   }
 
-  // Reset failed count
-  await executeQuery(
-    'UPDATE users SET failed_login_count = 0, locked_until = NULL WHERE UserID = ?',
-    [user.UserID],
-    c.env
-  );
+  // ── response ──
+  if (result.action === 'lock') {
+    return c.json({ error: result.errorMessage, isLocked: true }, 403);
+  }
+  if (result.action === 'reject') {
+    return c.json({ error: result.errorMessage }, 401);
+  }
 
   const userData = {
     id: user.UserID,

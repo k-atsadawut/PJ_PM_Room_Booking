@@ -2,10 +2,11 @@ const express = require('express');
 const db      = require('../config/db');
 const { requireAuth } = require('../middleware/auth');
 const { hashPassword, verifyPassword } = require('../utils/password');
+const { evaluateLoginAttempt, DEFAULT_MAX_ATTEMPTS, DEFAULT_LOCK_MINUTES } = require('../utils/authLock');
 const router  = express.Router();
 
-const MAX_ATTEMPTS  = parseInt(process.env.MAX_LOGIN_ATTEMPTS) || 10;
-const LOCK_MINUTES  = parseInt(process.env.LOGIN_LOCK_MINUTES)  || 360;
+const MAX_ATTEMPTS  = Number(process.env.MAX_LOGIN_ATTEMPTS)  || DEFAULT_MAX_ATTEMPTS;
+const LOCK_MINUTES  = Number(process.env.LOGIN_LOCK_MINUTES)  || DEFAULT_LOCK_MINUTES;
 
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
@@ -13,8 +14,6 @@ router.post('/login', async (req, res) => {
   if (!email || !password) {
     return res.status(400).json({ error: 'กรุณากรอกอีเมลและรหัสผ่าน' });
   }
-
-
 
   const [rows] = await db.execute(
     'SELECT * FROM users WHERE Email = ? LIMIT 1', [email]
@@ -25,38 +24,51 @@ router.post('/login', async (req, res) => {
     return res.status(401).json({ error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' });
   }
 
-  // ตรวจสอบบัญชีถูกล็อก (FR-14)
-  if (user.locked_until && new Date() < new Date(user.locked_until)) {
-    const unlockTime = new Date(user.locked_until).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-    return res.status(403).json({ error: `บัญชีถูกล็อก กรุณารอจนถึง ${unlockTime} น.` });
-  }
+  const passwordValid = await verifyPassword(password, user.Password);
 
-  const valid = await verifyPassword(password, user.Password);
+  // FR-19: ใช้ pure function evaluateLoginAttempt เพื่อคำนวณ action
+  // (ล็อกตรวจก่อนตรวจรหัสผ่าน → ป้องกัน login ด้วยรหัสถูกขณะบัญชีล็อกอยู่)
+  const result = evaluateLoginAttempt({
+    user,
+    passwordValid,
+    now: new Date(),
+    maxAttempts: MAX_ATTEMPTS,
+    lockMinutes: LOCK_MINUTES,
+  });
 
-  if (!valid) {
-    const attempts = (user.failed_login_count || 0) + 1;
-    const lockedUntil = attempts >= MAX_ATTEMPTS
-      ? new Date(Date.now() + LOCK_MINUTES * 60 * 1000)
-      : null;
-
+  // ── เขียน DB state ตามผล (มี race guard: WHERE เพิ่มเงื่อนไข count เดิม) ──
+  if (result.action === 'allow' && result.shouldResetCount) {
     await db.execute(
-      'UPDATE users SET failed_login_count = ?, locked_until = ? WHERE UserID = ?',
-      [attempts >= MAX_ATTEMPTS ? 0 : attempts, lockedUntil, user.UserID]
+      'UPDATE users SET failed_login_count = 0, locked_until = NULL WHERE UserID = ?',
+      [user.UserID]
     );
-
-    if (attempts >= MAX_ATTEMPTS) {
-      return res.status(403).json({ error: `กรอกรหัสผ่านผิด ${MAX_ATTEMPTS} ครั้ง บัญชีถูกล็อก ${LOCK_MINUTES / 60} ชั่วโมง` });
-    }
-
-    return res.status(401).json({ error: `อีเมลหรือรหัสผ่านไม่ถูกต้อง (${attempts}/${MAX_ATTEMPTS})` });
+  } else if (result.action === 'lock' && result.lockedUntil && !result.shouldResetCount) {
+    // บัญชีล็อกอยู่ก่อนแล้ว — ไม่ต้องแก้ DB
+  } else if (result.action === 'lock') {
+    // ถึงเกณฑ์ล็อกใหม่ — reset count=0 และตั้ง locked_until
+    await db.execute(
+      'UPDATE users SET failed_login_count = 0, locked_until = ? WHERE UserID = ?',
+      [result.lockedUntil, user.UserID]
+    );
+  } else if (result.action === 'reject') {
+    // รหัสผิดยังไม่ถึงเกณฑ์ — นับสะสม
+    // Race guard: อัปเดตเฉพาะเมื่อ count ยังเป็นค่าเดิม (กัน lost-update จาก request ซ้อน)
+    const expectedCount = Number(user.failed_login_count) || 0;
+    await db.execute(
+      'UPDATE users SET failed_login_count = ? WHERE UserID = ? AND failed_login_count = ?',
+      [result.attempts, user.UserID, expectedCount]
+    );
   }
 
-  // รีเซ็ต failed count
-  await db.execute(
-    'UPDATE users SET failed_login_count = 0, locked_until = NULL WHERE UserID = ?',
-    [user.UserID]
-  );
+  // ── ส่ง response ตาม action ─────────────────────────────────────
+  if (result.action === 'lock') {
+    return res.status(403).json({ error: result.errorMessage, isLocked: true });
+  }
+  if (result.action === 'reject') {
+    return res.status(401).json({ error: result.errorMessage });
+  }
 
+  // action === 'allow'
   req.session.user = {
     id:   user.UserID,
     name: user.Name,
