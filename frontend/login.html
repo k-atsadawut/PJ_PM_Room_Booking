@@ -89,21 +89,28 @@
         setError('');
         setLoading(true);
         try {
-          const { user } = await apiFetch('/api/auth/login', {
+          const response = await apiFetch('/api/auth/login', {
             method: 'POST',
             body: { email, password },
           });
-          if (user.forceChangePassword) {
+          if (response.user.forceChangePassword) {
             location.href = '/change-password.html';
           } else {
             sessionStorage.setItem('showHolidayPopup', 'true');
-            location.href = user.role === 'admin' ? '/admin/dashboard.html' : '/dashboard.html';
+            location.href = response.user.role === 'admin' ? '/admin/dashboard.html' : '/dashboard.html';
           }
         } catch (err) {
           if (err.isHoliday) {
             setError(err.error);
           } else {
-            setError(err.message);
+            // Show detailed error with attempt count if available
+            if (err.message && err.message.includes('/')) {
+              setError(err.message);
+            } else if (err.isLocked) {
+              setError(err.message);
+            } else {
+              setError(err.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+            }
           }
         } finally {
           setLoading(false);

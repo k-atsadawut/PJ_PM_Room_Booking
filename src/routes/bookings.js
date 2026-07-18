@@ -11,6 +11,24 @@ const OPEN_TIME = '08:30';
 const CLOSE_TIME = '17:00';
 const MAX_BOOKING_HOURS_DEFAULT = 3; // FR-23 (SRS v3.0)
 
+// Helper function to get current date in Thailand timezone (Asia/Bangkok, UTC+7)
+function getThailandDate() {
+  const now = new Date();
+  const thailandOffset = 7 * 60; // UTC+7 in minutes
+  const localOffset = now.getTimezoneOffset(); // Local timezone offset in minutes
+  const thailandTime = new Date(now.getTime() + (thailandOffset + localOffset) * 60000);
+  return thailandTime.toISOString().split('T')[0];
+}
+
+// Helper function to get current time in Thailand timezone
+function getThailandTime() {
+  const now = new Date();
+  const thailandOffset = 7 * 60; // UTC+7 in minutes
+  const localOffset = now.getTimezoneOffset(); // Local timezone offset in minutes
+  const thailandTime = new Date(now.getTime() + (thailandOffset + localOffset) * 60000);
+  return thailandTime.toTimeString().slice(0, 5);
+}
+
 // คำนวณชั่วโมงระหว่าง "HH:MM" สองค่า (end - start)
 function diffHours(start, end) {
   const [sh, sm] = start.split(':').map(Number);
@@ -84,7 +102,7 @@ bookings.post('/', requireAuth, async (c) => {
   const durationHours = diffHours(start, end);
   if (durationHours > MAX_BOOKING_HOURS) {
     return c.json({
-      error: `ระบบจำกัดการจองสูงสุด ${MAX_BOOKING_HOURS} ชั่วโมงต่อครั้ง (FR-23) กรุณาลดระยะเวลาการจอง`,
+      error: `ระบบจำกัดการจองสูงสุด ${MAX_BOOKING_HOURS} ชั่วโมงต่อครั้ง กรุณาลดระยะเวลาการจอง`,
     }, 400);
   }
 
@@ -93,31 +111,38 @@ bookings.post('/', requireAuth, async (c) => {
     return c.json({ error: 'สามารถจองห้องได้เฉพาะในช่วงเวลาทำการ 08:30 น. ถึง 17:00 น. เท่านั้น' }, 400);
   }
 
-  // FR-02 (SRS v3.0): จองได้เฉพาะ "วันปัจจุบัน" เท่านั้น (ไม่อนุญาตย้อนหลัง/ล่วงหน้า)
-  const today = new Date().toISOString().split('T')[0];
-  if (date !== today) {
-    return c.json({
-      error: date < today
-        ? 'ไม่สามารถจองห้องย้อนหลังได้ กรุณาเลือกวันที่ปัจจุบัน'
-        : 'ระบบรับจองเฉพาะวันปัจจุบันเท่านั้น ไม่รองรับการจองล่วงหน้า (FR-02)',
-    }, 400);
+  // FR-02 (Updated): จองได้เฉพาะ "วันปัจจุบัน" หรือ "วันถัดไป" เท่านั้น (ไม่อนุญาตย้อนหลัง/ล่วงหน้ามากกว่า 1 วัน)
+  const today = getThailandDate();
+  const tomorrowDate = new Date();
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const thailandOffset = 7 * 60;
+  const localOffset = tomorrowDate.getTimezoneOffset();
+  const thailandTomorrow = new Date(tomorrowDate.getTime() + (thailandOffset + localOffset) * 60000);
+  const tomorrow = thailandTomorrow.toISOString().split('T')[0];
+  
+  if (date < today) {
+    return c.json({ error: 'ไม่สามารถจองห้องย้อนหลังได้ กรุณาเลือกวันที่ปัจจุบันหรือวันข้างหน้า' }, 400);
+  }
+  
+  if (date > tomorrow) {
+    return c.json({ error: 'ระบบรับจองเฉพาะวันปัจจุบันและวันถัดไปเท่านั้น ไม่รองรับการจองล่วงหน้ามากกว่า 1 วัน' }, 400);
   }
 
   // FR-05: เลยเวลาปิดแล้ว (เฉพาะกรณีจองวันปัจจุบัน)
   if (date === today) {
-    const nowTime = new Date().toTimeString().slice(0, 5);
+    const nowTime = getThailandTime();
     if (nowTime >= CLOSE_TIME) {
       return c.json({ error: 'เลยเวลาทำการสำหรับการจองห้องในวันนี้แล้ว (หลัง 17:00 น.) โปรดเลือกจองล่วงหน้าในวันอื่นแทน' }, 400);
     }
   }
 
-  // FR-06: เสาร์-อาทิตย์
+  // FR-06: เสาร์-อาทิตย์ (ตรวจสอบจากวันที่จองจริง)
   const dow = new Date(date + 'T00:00:00').getDay();
   if (dow === 0 || dow === 6) {
     return c.json({ error: 'ระบบไม่เปิดให้จองห้องในวันเสาร์และวันอาทิตย์' }, 400);
   }
 
-  // FR-12: วันหยุดพิเศษ
+  // FR-12: วันหยุดพิเศษ (ตรวจสอบจากวันที่จองจริง)
   const holidays = await executeQuery(
     'SELECT HolidayID FROM holidays WHERE HolidayDate = ? LIMIT 1',
     [date],

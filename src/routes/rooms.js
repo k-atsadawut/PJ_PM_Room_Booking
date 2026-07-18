@@ -14,7 +14,6 @@ rooms.get('/', requireAuth, async (c) => {
       r.RoomName,
       r.Capacity,
       r.Status AS RoomStatus,
-      r.Description,
       COALESCE((
         SELECT JSON_ARRAYAGG(JSON_OBJECT(
           'bookingId', b.BookingID,

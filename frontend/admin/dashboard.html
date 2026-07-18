@@ -173,7 +173,7 @@
                   </div>
                   <div className="h-8 w-px bg-blue-200"></div>
                   <div className="text-center">
-                    <div className="text-xs text-gray-500">นับถอยหลัง</div>
+                    <div className="text-xs text-gray-500">นับถรายงานการอยหลัง</div>
                     <div className="text-sm font-bold text-blue-600">
                       {String(countdown.hours).padStart(2, '0')}:{String(countdown.minutes).padStart(2, '0')}:{String(countdown.seconds).padStart(2, '0')}
                     </div>
@@ -279,6 +279,7 @@
       const [bookings, setBookings] = useState([]);
       const [rooms, setRooms]       = useState([]);
       const [users, setUsers]       = useState([]);
+      const [reports, setReports]   = useState({ statusBreakdown: {}, roomStatistics: [], topUsers: [] });
       const [loading, setLoading]   = useState(true);
       const [filter, setFilter]     = useState('pending');
       const [viewBooking, setViewBooking] = useState(null);
@@ -305,20 +306,23 @@
       async function loadData() {
         setLoading(true);
         try {
-          const [bookingsData, roomsData, usersData] = await Promise.all([
+          const [bookingsData, roomsData, usersData, reportsData] = await Promise.all([
             apiFetch('/api/admin/bookings'),
             apiFetch('/api/rooms'),
-            apiFetch('/api/admin/users')
+            apiFetch('/api/admin/users'),
+            apiFetch('/api/admin/reports/summary')
           ]);
           setBookings(bookingsData || []);
           setRooms(roomsData || []);
           setUsers(usersData || []);
+          setReports(reportsData || { statusBreakdown: {}, roomStatistics: [], topUsers: [] });
         } catch (e) {
           console.error('Error loading data:', e);
           setError('ไม่สามารถโหลดข้อมูลได้: ' + (e.message || 'Unknown error'));
           setBookings([]);
           setRooms([]);
           setUsers([]);
+          setReports({ statusBreakdown: {}, roomStatistics: [], topUsers: [] });
         } finally {
           setLoading(false);
         }
@@ -362,8 +366,11 @@
 
       function exportUsageData() {
         const csvContent = [
-          ['BookingID', 'UserName', 'RoomName', 'BookingDate', 'StartTime', 'EndTime', 'Status'].join(','),
-          ...bookings.map(b => [b.BookingID, b.UserName, b.RoomName, b.BookingDate, b.StartTime, b.EndTime, b.Status].join(','))
+          ['BookingID', 'UserName', 'UserEmail', 'RoomName', 'RoomID', 'BookingDate', 'StartTime', 'EndTime', 'Duration (hrs)', 'Status', 'CreatedAt'].join(','),
+          ...bookings.map(b => {
+            const duration = ((new Date(`2000-01-01T${b.EndTime}`) - new Date(`2000-01-01T${b.StartTime}`)) / 3600000).toFixed(1);
+            return [b.BookingID, b.UserName, b.UserEmail || '', b.RoomName, b.RoomID, b.BookingDate, b.StartTime, b.EndTime, duration, b.Status, b.CreatedAt || ''].join(',');
+          })
         ].join('\n');
         
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -579,23 +586,26 @@
                   ห้องที่ใช้มากที่สุด
                 </h4>
                 <div className="space-y-2">
-                  {rooms.slice(0, 3).map((room, idx) => {
-                    const roomBookings = bookings.filter(b => b.RoomID === room.RoomID).length;
-                    const maxBookings = Math.max(...rooms.map(r => bookings.filter(b => b.RoomID === r.RoomID).length));
-                    const percentage = maxBookings > 0 ? (roomBookings / maxBookings) * 100 : 0;
-                    
-                    return (
-                      <div key={room.RoomID}>
-                        <div className="flex justify-between text-sm mb-1">
-                          <span className="text-gray-700">{room.RoomName}</span>
-                          <span className="text-gray-500">{roomBookings} ครั้ง</span>
+                  {reports.roomStatistics && reports.roomStatistics.length > 0 ? (
+                    reports.roomStatistics.slice(0, 3).map((room, idx) => {
+                      const maxBookings = Math.max(...reports.roomStatistics.map(r => r.total_bookings || 0));
+                      const percentage = maxBookings > 0 ? ((room.total_bookings || 0) / maxBookings) * 100 : 0;
+                      
+                      return (
+                        <div key={room.RoomName || idx}>
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="text-gray-700">{room.RoomName}</span>
+                            <span className="text-gray-500">{room.total_bookings || 0} ครั้ง</span>
+                          </div>
+                          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-blue-500 rounded-full transition-all duration-300" style={{ width: `${percentage}%` }}></div>
+                          </div>
                         </div>
-                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-blue-500 rounded-full transition-all duration-300" style={{ width: `${percentage}%` }}></div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  ) : (
+                    <div className="text-sm text-gray-400 text-center py-2">ไม่มีข้อมูล</div>
+                  )}
                 </div>
               </div>
 
@@ -606,24 +616,21 @@
                   ผู้ใช้งานบ่อย
                 </h4>
                 <div className="space-y-2">
-                  {(() => {
-                    const userBookings = bookings.reduce((acc, b) => {
-                      acc[b.UserName] = (acc[b.UserName] || 0) + 1;
-                      return acc;
-                    }, {});
-                    const topUsers = Object.entries(userBookings).sort((a, b) => b[1] - a[1]).slice(0, 3);
-                    return topUsers.map(([userName, count]) => (
-                      <div key={userName} className="flex items-center justify-between">
+                  {reports.topUsers && reports.topUsers.length > 0 ? (
+                    reports.topUsers.slice(0, 3).map((user, idx) => (
+                      <div key={user.UserID || idx} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 text-xs font-medium">
-                            {userName.charAt(0)}
+                            {user.Name ? user.Name.charAt(0) : 'U'}
                           </div>
-                          <span className="text-sm text-gray-700">{userName}</span>
+                          <span className="text-sm text-gray-700">{user.Name}</span>
                         </div>
-                        <span className="text-sm text-gray-500">{count} ครั้ง</span>
+                        <span className="text-sm text-gray-500">{user.total_bookings || 0} ครั้ง</span>
                       </div>
-                    ));
-                  })()}
+                    ))
+                  ) : (
+                    <div className="text-sm text-gray-400 text-center py-2">ไม่มีข้อมูล</div>
+                  )}
                 </div>
               </div>
 
@@ -634,22 +641,36 @@
                   แนวโน้มการจอง
                 </h4>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">สัปดาห์นี้</span>
-                    <span className="text-sm font-semibold text-green-600">+12%</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">เดือนนี้</span>
-                    <span className="text-sm font-semibold text-green-600">+8%</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">อัตราอนุมัติ</span>
-                    <span className="text-sm font-semibold text-blue-600">85%</span>
-                  </div>
-                  <div className="pt-2 border-t border-gray-100">
-                    <div className="text-xs text-gray-500 mb-1">การจองต่อวัน (เฉลี่ย)</div>
-                    <div className="text-lg font-bold text-gray-800">{Math.round(bookings.length / 7)}/วัน</div>
-                  </div>
+                  {reports.statusBreakdown ? (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">รออนุมัติ</span>
+                        <span className="text-sm font-semibold text-yellow-600">{reports.statusBreakdown.pending || 0}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">อนุมัติแล้ว</span>
+                        <span className="text-sm font-semibold text-green-600">{reports.statusBreakdown.approved || 0}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">ปฏิเสธ</span>
+                        <span className="text-sm font-semibold text-red-600">{reports.statusBreakdown.rejected || 0}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">ยกเลิก</span>
+                        <span className="text-sm font-semibold text-gray-600">{reports.statusBreakdown.cancelled || 0}</span>
+                      </div>
+                      <div className="pt-2 border-t border-gray-100">
+                        <div className="text-xs text-gray-500 mb-1">อัตราอนุมัติ</div>
+                        <div className="text-lg font-bold text-gray-800">
+                          {reports.statusBreakdown.total_bookings > 0 
+                            ? Math.round((reports.statusBreakdown.approved / reports.statusBreakdown.total_bookings) * 100) 
+                            : 0}%
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-sm text-gray-400 text-center py-2">ไม่มีข้อมูล</div>
+                  )}
                 </div>
               </div>
             </div>
@@ -778,7 +799,7 @@
                           <div className="text-xs text-gray-500">{b.UserEmail}</div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`text-xs font-medium px-3 py-1 rounded-full border ${STATUS[b.Status]?.color}`}>
+                          <span className={`text-xs font-medium px-3 py-1 rounded-full border whitespace-nowrap ${STATUS[b.Status]?.color}`}>
                             {STATUS[b.Status]?.label}
                           </span>
                         </td>
@@ -848,7 +869,7 @@
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">สถานะ:</span>
-                    <span className={`text-xs font-medium px-3 py-1 rounded-full border ${STATUS[viewBooking.Status]?.color}`}>
+                    <span className={`text-xs font-medium px-3 py-1 rounded-full border whitespace-nowrap ${STATUS[viewBooking.Status]?.color}`}>
                       {STATUS[viewBooking.Status]?.label}
                     </span>
                   </div>
@@ -1269,7 +1290,7 @@
                             </p>
                           )}
                         </div>
-                        <span className={`text-xs font-medium px-3 py-1 rounded-full border ${ROOM_STATUS[r.Status]?.color} flex-shrink-0 ml-2`}>
+                        <span className={`text-xs font-medium px-3 py-1 rounded-full border whitespace-nowrap ${ROOM_STATUS[r.Status]?.color} flex-shrink-0 ml-2`}>
                           {ROOM_STATUS[r.Status]?.label}
                         </span>
                       </div>
@@ -1515,12 +1536,12 @@
                       <td className="px-6 py-4 font-medium text-gray-800">{u.Name}</td>
                       <td className="px-6 py-4 text-gray-500">{u.Email}</td>
                       <td className="px-6 py-4">
-                        <span className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full border border-blue-200 font-medium">
+                        <span className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full border border-blue-200 font-medium whitespace-nowrap">
                           {u.Role}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-xs font-mono bg-gray-100 text-gray-700 px-3 py-1 rounded-full border border-gray-200">
+                        <span className="text-xs font-mono bg-gray-100 text-gray-700 px-3 py-1 rounded-full border border-gray-200 whitespace-nowrap">
                           {u.Password}
                         </span>
                       </td>
@@ -1706,7 +1727,7 @@
               {filtered.map(r => (
                 <div key={r.RequestID} className="bg-white rounded-2xl border px-6 py-4 card-hover transition-all duration-200">
                   <div className="flex items-center gap-3 mb-2">
-                    <span className={`text-xs font-medium px-3 py-1 rounded-full border ${STATUS[r.Status]?.color || 'bg-gray-100 text-gray-800 border-gray-200'}`}>
+                    <span className={`text-xs font-medium px-3 py-1 rounded-full border whitespace-nowrap ${STATUS[r.Status]?.color || 'bg-gray-100 text-gray-800 border-gray-200'}`}>
                       {STATUS[r.Status]?.label || r.Status}
                     </span>
                     <span className="text-sm text-gray-500">
@@ -1957,6 +1978,23 @@
         }
       }
 
+      function exportMaintenanceData() {
+        const csvContent = [
+          ['ReportID', 'RoomName', 'RoomID', 'ReporterName', 'Description', 'Urgency', 'Status', 'Notes', 'ReportDate', 'UpdatedDate'].join(','),
+          ...reports.map(r => [r.ReportID, r.RoomName, r.RoomID, r.ReporterName || '', r.Description, r.Urgency, r.Status, r.Notes || '', r.ReportDate, r.UpdatedDate || ''].join(','))
+        ].join('\n');
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `maintenance_reports_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
       const filtered = reports.filter(r => filter === 'all' || r.Status === filter);
 
       const statusLabels = {
@@ -1971,16 +2009,19 @@
       return (
         <div className="space-y-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-800">รายการแจ้งซ่อมทั้งหมด</h3>
-            <div className="flex gap-2">
-              {['all', 'pending', 'in_progress', 'completed', 'rejected'].map(f => (
-                <button key={f} onClick={() => setFilter(f)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition ${
-                    filter === f ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-slate-200 hover:bg-slate-50'
-                  }`}>
-                  {f === 'all' ? 'ทั้งหมด' : (statusLabels[f]?.label || f)}
-                </button>
-              ))}
+            <h3 className="text-lg font-bold text-gray-800">รายงานการแจ้งซ่อม</h3>
+            <div className="flex gap-3">
+              <span onClick={exportMaintenanceData} className="text-sm text-green-600 hover:text-green-700 cursor-pointer">ส่งออก CSV</span>
+              <div className="flex gap-2">
+                {['all', 'pending', 'in_progress', 'completed', 'rejected'].map(f => (
+                  <button key={f} onClick={() => setFilter(f)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition ${
+                      filter === f ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-slate-200 hover:bg-slate-50'
+                    }`}>
+                    {f === 'all' ? 'ทั้งหมด' : (statusLabels[f]?.label || f)}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -2015,7 +2056,7 @@
                         {formatThaiDate(r.ReportDate)}
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`text-xs font-medium px-3 py-1 rounded-full border ${statusLabels[r.Status]?.color}`}>
+                        <span className={`text-xs font-medium px-3 py-1 rounded-full border whitespace-nowrap ${statusLabels[r.Status]?.color}`}>
                           {statusLabels[r.Status]?.label}
                         </span>
                       </td>
