@@ -3,9 +3,9 @@ const db      = require('../config/db');
 const { requireAuth } = require('../middleware/auth');
 const router  = express.Router();
 
-// GET /api/rooms — ดูห้องทั้งหมดพร้อมสถานะวันนี้ (FR-04, FR-07)
+// GET /api/rooms — ดูห้องทั้งหมดพร้อมสถานะวันนี้ (FR-04, FR-10)
 router.get('/', async (req, res) => {
-  const today = new Date().toISOString().split('T')[0];
+  const today = req.query.date || new Date().toISOString().split('T')[0];
 
   const [rooms] = await db.execute(`
     SELECT
@@ -24,7 +24,15 @@ router.get('/', async (req, res) => {
           ),
           NULL
         )
-      ) AS bookings_today
+      ) AS bookings_today,
+      CASE WHEN EXISTS (
+        SELECT 1 FROM bookings b2
+        WHERE b2.RoomID = r.RoomID
+          AND b2.BookingDate = ?
+          AND b2.Status = 'approved'
+          AND b2.StartTime <= CURTIME() AND b2.EndTime > CURTIME()
+      ) THEN 'booked'
+      ELSE r.Status END AS current_status
     FROM rooms r
     LEFT JOIN bookings b
       ON b.RoomID = r.RoomID
@@ -32,7 +40,7 @@ router.get('/', async (req, res) => {
       AND b.Status IN ('pending','approved')
     GROUP BY r.RoomID
     ORDER BY r.RoomName
-  `, [today]);
+  `, [today, today]);
 
   // กรอง null ออกจาก JSON_ARRAYAGG
   const result = rooms.map(room => {
@@ -47,6 +55,50 @@ router.get('/', async (req, res) => {
         bookings_today: [],
       };
     }
+  });
+
+  res.json(result);
+});
+
+// GET /api/rooms/availability?date=YYYY-MM-DD — ตรวจสถานะว่างของห้องทั้งหมดในวันที่ระบุ (FR-10)
+router.get('/availability', async (req, res) => {
+  const { date } = req.query;
+  if (!date) {
+    return res.status(400).json({ error: 'ต้องระบุพารามิเตอร์ date (YYYY-MM-DD)' });
+  }
+
+  const [rows] = await db.execute(`
+    SELECT
+      r.RoomID,
+      r.RoomName,
+      r.Status AS RoomStatus,
+      COALESCE((
+        SELECT JSON_ARRAYAGG(JSON_OBJECT(
+          'start',  b.StartTime,
+          'end',    b.EndTime,
+          'status', b.Status
+        ))
+        FROM bookings b
+        WHERE b.RoomID = r.RoomID
+          AND b.BookingDate = ?
+          AND b.Status IN ('pending','approved')
+      ), JSON_ARRAY()) AS booked_slots
+    FROM rooms r
+    ORDER BY r.RoomName
+  `, [date]);
+
+  const result = rows.map(r => {
+    let slots = r.booked_slots;
+    if (typeof slots === 'string') {
+      try { slots = JSON.parse(slots); } catch { slots = []; }
+    }
+    return {
+      roomId:   r.RoomID,
+      roomName: r.RoomName,
+      roomStatus: r.RoomStatus,
+      bookedSlots: Array.isArray(slots) ? slots : [],
+      available: r.RoomStatus === 'available' && (!Array.isArray(slots) || slots.length === 0),
+    };
   });
 
   res.json(result);

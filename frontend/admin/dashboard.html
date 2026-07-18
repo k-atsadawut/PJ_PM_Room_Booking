@@ -1053,7 +1053,6 @@
       const [editForm, setEditForm] = useState({ RoomName: '', Capacity: '', Status: '', Description: '' });
       const [showAddForm, setShowAddForm] = useState(false);
       const [addForm, setAddForm] = useState({ RoomName: '', Capacity: '', Status: 'available', Description: '' });
-      const [qrRoom, setQrRoom] = useState(null);
 
       useEffect(() => { loadRooms(); }, []);
 
@@ -1298,86 +1297,11 @@
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                           ลบ
                         </button>
-                        <button 
-                          onClick={() => setQrRoom(r)} 
-                          className="text-sm text-indigo-600 hover:text-indigo-700 font-medium transition flex items-center gap-1 ml-auto" 
-                          aria-label="แสดง QR Code"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m0 11v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
-                          </svg>
-                          QR Code
-                        </button>
                       </div>
                     </>
                   )}
                 </div>
               ))}
-            </div>
-          )}
-
-          {qrRoom && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 relative">
-                <button
-                  onClick={() => setQrRoom(null)}
-                  className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"
-                  aria-label="ปิด">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-                <div className="text-center">
-                  <h3 className="text-lg font-bold text-gray-800 mb-2">QR Code แจ้งซ่อม</h3>
-                  <p className="text-sm text-gray-500 mb-4">{qrRoom.RoomName}</p>
-                  <div className="flex justify-center bg-gray-50 p-4 rounded-xl mb-4 border">
-                    <img 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.origin + '/maintenance.html?roomId=' + qrRoom.RoomID)}`} 
-                      alt={`QR Code ${qrRoom.RoomName}`}
-                      className="w-48 h-48"
-                    />
-                  </div>
-                  <p className="text-xs text-gray-400 select-all mb-4 break-all">
-                    {window.location.origin + '/maintenance.html?roomId=' + qrRoom.RoomID}
-                  </p>
-                  <button 
-                    onClick={() => {
-                      const printWindow = window.open('', '_blank');
-                      printWindow.document.write(`
-                        <html>
-                          <head>
-                            <title>พิมพ์ QR Code - ${qrRoom.RoomName}</title>
-                            <style>
-                              body { font-family: sans-serif; text-align: center; padding: 50px; }
-                              .container { border: 2px dashed #ccc; padding: 30px; display: inline-block; border-radius: 10px; }
-                              img { width: 250px; height: 250px; margin-bottom: 20px; }
-                              h1 { margin: 10px 0; }
-                            </style>
-                          </head>
-                          <body>
-                            <div class="container">
-                              <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(window.location.origin + '/maintenance.html?roomId=' + qrRoom.RoomID)}" />
-                              <h1>สแกนเพื่อแจ้งซ่อม</h1>
-                              <h2>ห้อง: ${qrRoom.RoomName}</h2>
-                              <p>ระบบจองห้องผลิตสื่อดิจิทัล มหาวิทยาลัยนอร์ทกรุงเทพ</p>
-                            </div>
-                            <script>
-                              window.onload = function() { window.print(); window.close(); }
-                            <\/script>
-                          </body>
-                        </html>
-                      `);
-                      printWindow.document.close();
-                    }} 
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-xl transition text-sm flex items-center justify-center gap-2"
-                  >
-                    <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                    </svg>
-                    พิมพ์ QR Code แจ้งซ่อม
-                  </button>
-                </div>
-              </div>
             </div>
           )}
         </div>

@@ -8,6 +8,14 @@ const router  = express.Router();
 
 const OPEN_TIME  = '08:30';
 const CLOSE_TIME = '17:00';
+const MAX_BOOKING_HOURS_DEFAULT = 3; // FR-23 (SRS v3.0)
+
+// คำนวณชั่วโมงระหว่าง "HH:MM" สองค่า (end - start)
+function diffHours(start, end) {
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  return (eh * 60 + em - (sh * 60 + sm)) / 60;
+}
 
 // GET /api/bookings — ดูการจองของตัวเอง
 router.get('/', requireAuth, async (req, res) => {
@@ -35,15 +43,28 @@ router.post('/', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'เวลาสิ้นสุดการจองต้องอยู่หลังเวลาเริ่มต้น' });
   }
 
+  // FR-23: จำกัดการจองสูงสุด 3 ชั่วโมงต่อครั้ง (SRS v3.0 Proposed)
+  const MAX_BOOKING_HOURS = Number(process.env.MAX_BOOKING_HOURS) || MAX_BOOKING_HOURS_DEFAULT;
+  const durationHours = diffHours(start, end);
+  if (durationHours > MAX_BOOKING_HOURS) {
+    return res.status(400).json({
+      error: `ระบบจำกัดการจองสูงสุด ${MAX_BOOKING_HOURS} ชั่วโมงต่อครั้ง (FR-23) กรุณาลดระยะเวลาการจอง`,
+    });
+  }
+
   // FR-05: เวลาทำการ 08:30–17:00
   if (start < OPEN_TIME || end > CLOSE_TIME) {
     return res.status(400).json({ error: 'สามารถจองห้องได้เฉพาะในช่วงเวลาทำการ 08:30 น. ถึง 17:00 น. เท่านั้น' });
   }
 
-  // FR-02: ป้องกันการจองย้อนหลัง และอนุญาตให้จองล่วงหน้าได้
+  // FR-02 (SRS v3.0): จองได้เฉพาะ "วันปัจจุบัน" เท่านั้น (ไม่อนุญาตย้อนหลัง/ล่วงหน้า)
   const today = new Date().toISOString().split('T')[0];
-  if (date < today) {
-    return res.status(400).json({ error: 'ไม่สามารถจองห้องย้อนหลังได้ กรุณาเลือกวันที่ปัจจุบันหรือวันข้างหน้า' });
+  if (date !== today) {
+    return res.status(400).json({
+      error: date < today
+        ? 'ไม่สามารถจองห้องย้อนหลังได้ กรุณาเลือกวันที่ปัจจุบัน'
+        : 'ระบบรับจองเฉพาะวันปัจจุบันเท่านั้น ไม่รองรับการจองล่วงหน้า (FR-02)',
+    });
   }
 
   // FR-05: เลยเวลาปิดแล้ว (เฉพาะกรณีจองวันปัจจุบัน)

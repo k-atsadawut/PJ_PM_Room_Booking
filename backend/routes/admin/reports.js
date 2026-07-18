@@ -61,7 +61,7 @@ router.get('/frequent-users', requireAdmin, async (req, res) => {
   const { limit = 10 } = req.query;
 
   const [rows] = await db.execute(`
-    SELECT 
+    SELECT
       u.UserID,
       u.Name,
       u.Email,
@@ -74,6 +74,52 @@ router.get('/frequent-users', requireAdmin, async (req, res) => {
     ORDER BY BookingCount DESC
     LIMIT ?
   `, [limit]);
+
+  res.json(rows);
+});
+
+// GET /api/admin/reports/users — รายงานสถิติผู้ใช้ (FR-21) — alias/richer version of frequent-users
+router.get('/users', requireAdmin, async (req, res) => {
+  const { startDate, endDate, limit } = req.query;
+
+  let query = `
+    SELECT
+      u.UserID,
+      u.Name,
+      u.Email,
+      u.Role,
+      u.Faculty,
+      u.Department,
+      COUNT(b.BookingID) AS total_bookings,
+      SUM(CASE WHEN b.Status = 'approved'  THEN 1 ELSE 0 END) AS approved_bookings,
+      SUM(CASE WHEN b.Status = 'pending'   THEN 1 ELSE 0 END) AS pending_bookings,
+      SUM(CASE WHEN b.Status = 'rejected'  THEN 1 ELSE 0 END) AS rejected_bookings,
+      SUM(CASE WHEN b.Status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled_bookings
+    FROM users u
+    LEFT JOIN bookings b ON u.UserID = b.UserID
+  `;
+
+  const params = [];
+  const conditions = [];
+
+  if (startDate) {
+    conditions.push('b.BookingDate >= ?');
+    params.push(startDate);
+  }
+  if (endDate) {
+    conditions.push('b.BookingDate <= ?');
+    params.push(endDate);
+  }
+  if (conditions.length > 0) {
+    query += ' WHERE ' + conditions.join(' AND ');
+  }
+
+  query += ' GROUP BY u.UserID ORDER BY total_bookings DESC, approved_bookings DESC';
+  const lim = Math.max(1, Math.min(1000, parseInt(limit, 10) || 10));
+  query += ' LIMIT ?';
+  params.push(lim);
+
+  const [rows] = await db.execute(query, params);
 
   res.json(rows);
 });

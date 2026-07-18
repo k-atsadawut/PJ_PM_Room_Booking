@@ -4,14 +4,95 @@ import { executeQuery } from '../config/db';
 
 const rooms = new Hono();
 
-// GET /api/rooms — ดูรายการห้องทั้งหมด
+// GET /api/rooms — ดูรายการห้องทั้งหมด พร้อมสถานะการจองวันนี้ (FR-04, FR-10)
 rooms.get('/', requireAuth, async (c) => {
-  const result = await executeQuery(
-    'SELECT * FROM rooms ORDER BY RoomName',
-    [],
-    c.env
-  );
-  
+  const date = c.req.query('date') || new Date().toISOString().split('T')[0];
+
+  const result = await executeQuery(`
+    SELECT
+      r.RoomID,
+      r.RoomName,
+      r.Capacity,
+      r.Status AS RoomStatus,
+      r.Description,
+      COALESCE((
+        SELECT JSON_ARRAYAGG(JSON_OBJECT(
+          'bookingId', b.BookingID,
+          'start',     b.StartTime,
+          'end',       b.EndTime,
+          'status',    b.Status
+        ))
+        FROM bookings b
+        WHERE b.RoomID = r.RoomID
+          AND b.BookingDate = ?
+          AND b.Status IN ('pending','approved')
+      ), JSON_ARRAY()) AS bookings_today,
+      CASE WHEN EXISTS (
+        SELECT 1 FROM bookings b2
+        WHERE b2.RoomID = r.RoomID
+          AND b2.BookingDate = ?
+          AND b2.Status = 'approved'
+          AND b2.StartTime <= CURTIME() AND b2.EndTime > CURTIME()
+      ) THEN 'booked'
+      ELSE r.Status END AS current_status
+    FROM rooms r
+    ORDER BY r.RoomName
+  `, [date, date], c.env);
+
+  // Parse bookings_today JSON string → array (MySQL JSON_ARRAYAGG returns string in some drivers)
+  const roomsWithParsed = result.map(room => {
+    let bookings = room.bookings_today;
+    if (typeof bookings === 'string') {
+      try { bookings = JSON.parse(bookings); } catch { bookings = []; }
+    }
+    if (!Array.isArray(bookings)) bookings = [];
+    return { ...room, bookings_today: bookings };
+  });
+
+  return c.json(roomsWithParsed);
+});
+
+// GET /api/rooms/availability?date=YYYY-MM-DD — ตรวจสถานะว่างของห้องทั้งหมดในวันที่ระบุ (FR-10)
+rooms.get('/availability', requireAuth, async (c) => {
+  const date = c.req.query('date');
+  if (!date) {
+    return c.json({ error: 'ต้องระบุพารามิเตอร์ date (YYYY-MM-DD)' }, 400);
+  }
+
+  const rows = await executeQuery(`
+    SELECT
+      r.RoomID,
+      r.RoomName,
+      r.Status AS RoomStatus,
+      COALESCE((
+        SELECT JSON_ARRAYAGG(JSON_OBJECT(
+          'start',  b.StartTime,
+          'end',    b.EndTime,
+          'status', b.Status
+        ))
+        FROM bookings b
+        WHERE b.RoomID = r.RoomID
+          AND b.BookingDate = ?
+          AND b.Status IN ('pending','approved')
+      ), JSON_ARRAY()) AS booked_slots
+    FROM rooms r
+    ORDER BY r.RoomName
+  `, [date], c.env);
+
+  const result = rows.map(r => {
+    let slots = r.booked_slots;
+    if (typeof slots === 'string') {
+      try { slots = JSON.parse(slots); } catch { slots = []; }
+    }
+    return {
+      roomId:   r.RoomID,
+      roomName: r.RoomName,
+      roomStatus: r.RoomStatus,
+      bookedSlots: Array.isArray(slots) ? slots : [],
+      available: r.RoomStatus === 'available' && (!Array.isArray(slots) || slots.length === 0),
+    };
+  });
+
   return c.json(result);
 });
 

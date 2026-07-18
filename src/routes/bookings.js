@@ -9,6 +9,14 @@ const bookings = new Hono();
 
 const OPEN_TIME = '08:30';
 const CLOSE_TIME = '17:00';
+const MAX_BOOKING_HOURS_DEFAULT = 3; // FR-23 (SRS v3.0)
+
+// คำนวณชั่วโมงระหว่าง "HH:MM" สองค่า (end - start)
+function diffHours(start, end) {
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  return (eh * 60 + em - (sh * 60 + sm)) / 60;
+}
 
 // Helper function to get next available day (not holiday, not weekend)
 async function getNextAvailableDay(startDate, env) {
@@ -71,15 +79,28 @@ bookings.post('/', requireAuth, async (c) => {
     return c.json({ error: 'เวลาสิ้นสุดการจองต้องอยู่หลังเวลาเริ่มต้น' }, 400);
   }
 
+  // FR-23: จำกัดการจองสูงสุด 3 ชั่วโมงต่อวัน (SRS v3.0 Proposed)
+  const MAX_BOOKING_HOURS = Number(c.env?.MAX_BOOKING_HOURS) || 3;
+  const durationHours = diffHours(start, end);
+  if (durationHours > MAX_BOOKING_HOURS) {
+    return c.json({
+      error: `ระบบจำกัดการจองสูงสุด ${MAX_BOOKING_HOURS} ชั่วโมงต่อครั้ง (FR-23) กรุณาลดระยะเวลาการจอง`,
+    }, 400);
+  }
+
   // FR-05: เวลาทำการ 08:30–17:00
   if (start < OPEN_TIME || end > CLOSE_TIME) {
     return c.json({ error: 'สามารถจองห้องได้เฉพาะในช่วงเวลาทำการ 08:30 น. ถึง 17:00 น. เท่านั้น' }, 400);
   }
 
-  // FR-02: ป้องกันการจองย้อนหลัง และอนุญาตให้จองล่วงหน้าได้
+  // FR-02 (SRS v3.0): จองได้เฉพาะ "วันปัจจุบัน" เท่านั้น (ไม่อนุญาตย้อนหลัง/ล่วงหน้า)
   const today = new Date().toISOString().split('T')[0];
-  if (date < today) {
-    return c.json({ error: 'ไม่สามารถจองห้องย้อนหลังได้ กรุณาเลือกวันที่ปัจจุบันหรือวันข้างหน้า' }, 400);
+  if (date !== today) {
+    return c.json({
+      error: date < today
+        ? 'ไม่สามารถจองห้องย้อนหลังได้ กรุณาเลือกวันที่ปัจจุบัน'
+        : 'ระบบรับจองเฉพาะวันปัจจุบันเท่านั้น ไม่รองรับการจองล่วงหน้า (FR-02)',
+    }, 400);
   }
 
   // FR-05: เลยเวลาปิดแล้ว (เฉพาะกรณีจองวันปัจจุบัน)
@@ -133,21 +154,16 @@ bookings.post('/', requireAuth, async (c) => {
     return c.json({ error: 'คุณมีการจองหรือคำขอจองในวันนี้แล้ว ระบบจำกัดให้จองได้เพียง 1 ครั้งต่อวันเท่านั้น' }, 400);
   }
 
-  // สร้างการจอง - ถ้าไม่มี conflict ให้อนุมัติทันที
-  const status = 'approved'; // Instant approval when no conflict
+  // FR-07: สถานะเริ่มต้น = 'pending' (รออนุมัติ) — ไม่ auto-approve
+  // (ก่อนหน้านี้ตั้งเป็น 'approved' ทำให้ FR-07/FR-11/FR-12 ล้มเหลว)
   const result = await executeQuery(`
     INSERT INTO bookings (UserID, RoomID, BookingDate, StartTime, EndTime, Status)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `, [session.user.id, roomId, date, start, end, status], c.env);
+    VALUES (?, ?, ?, ?, ?, 'pending')
+  `, [session.user.id, roomId, date, start, end], c.env);
 
   const bookingId = result.insertId;
 
-  // ถ้าอนุมัติทันที ไม่ต้องแจ้ง Admin
-  if (status === 'approved') {
-    return c.json({ success: true, bookingId, instantApproval: true });
-  }
-
-  // FR-09: แจ้ง Admin (notification ในระบบ) - สำหรับกรณีที่ต้องอนุมัติ
+  // FR-11: แจ้ง Admin (notification ในระบบ) ทุกครั้งที่มีคำขอใหม่
   const admins = await executeQuery("SELECT UserID, Email FROM users WHERE Role = 'admin'", [], c.env);
   const room = await executeQuery("SELECT RoomName FROM rooms WHERE RoomID = ?", [roomId], c.env);
   const roomName = room[0]?.RoomName || roomId;

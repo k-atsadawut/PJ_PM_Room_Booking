@@ -3,6 +3,7 @@ import { requireAuth } from '../middleware/auth';
 import { createSession, destroySession, getSession } from '../middleware/session';
 import { hashPassword, verifyPassword } from '../utils/password';
 import { evaluateLoginAttempt, DEFAULT_MAX_ATTEMPTS, DEFAULT_LOCK_MINUTES } from '../utils/authLock';
+import { logSecurityEvent } from '../utils/securityLog';
 import { executeQuery } from '../config/db';
 
 const auth = new Hono();
@@ -28,6 +29,13 @@ auth.post('/login', async (c) => {
   const user = users[0];
 
   if (!user) {
+    await logSecurityEvent({
+      email,
+      eventType: 'login_failed',
+      ipAddress: c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for'),
+      userAgent: c.req.header('user-agent'),
+      details: 'email not found',
+    }, c.env);
     return c.json({ error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' }, 401);
   }
 
@@ -65,11 +73,39 @@ auth.post('/login', async (c) => {
 
   // ── response ──
   if (result.action === 'lock') {
+    await logSecurityEvent({
+      userId: user.UserID,
+      email: user.Email,
+      eventType: 'account_locked',
+      ipAddress: c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for'),
+      userAgent: c.req.header('user-agent'),
+      failedAttempt: maxAttempts,
+      details: result.errorMessage,
+    }, c.env);
     return c.json({ error: result.errorMessage, isLocked: true }, 403);
   }
   if (result.action === 'reject') {
+    await logSecurityEvent({
+      userId: user.UserID,
+      email: user.Email,
+      eventType: 'login_failed',
+      ipAddress: c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for'),
+      userAgent: c.req.header('user-agent'),
+      failedAttempt: result.attempts,
+      details: result.errorMessage,
+    }, c.env);
     return c.json({ error: result.errorMessage }, 401);
   }
+
+  // action === 'allow'
+  await logSecurityEvent({
+    userId: user.UserID,
+    email: user.Email,
+    eventType: 'login_success',
+    ipAddress: c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for'),
+    userAgent: c.req.header('user-agent'),
+    details: result.shouldResetCount ? 'success (counter reset)' : 'success',
+  }, c.env);
 
   const userData = {
     id: user.UserID,

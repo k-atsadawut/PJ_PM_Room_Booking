@@ -3,10 +3,14 @@ const db      = require('../config/db');
 const { requireAuth } = require('../middleware/auth');
 const { hashPassword, verifyPassword } = require('../utils/password');
 const { evaluateLoginAttempt, DEFAULT_MAX_ATTEMPTS, DEFAULT_LOCK_MINUTES } = require('../utils/authLock');
+const { logSecurityEvent } = require('../utils/securityLog');
 const router  = express.Router();
 
 const MAX_ATTEMPTS  = Number(process.env.MAX_LOGIN_ATTEMPTS)  || DEFAULT_MAX_ATTEMPTS;
 const LOCK_MINUTES  = Number(process.env.LOGIN_LOCK_MINUTES)  || DEFAULT_LOCK_MINUTES;
+
+// Wrap mysql2 pool เป็น interface ที่ logSecurityEvent ใช้ (query(sql, params))
+const securityLogDb = { query: (sql, params) => db.query(sql, params) };
 
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
@@ -21,6 +25,13 @@ router.post('/login', async (req, res) => {
   const user = rows[0];
 
   if (!user) {
+    await logSecurityEvent(securityLogDb, {
+      email,
+      eventType: 'login_failed',
+      ipAddress: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers['user-agent'],
+      details: 'email not found',
+    });
     return res.status(401).json({ error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' });
   }
 
@@ -62,13 +73,40 @@ router.post('/login', async (req, res) => {
 
   // ── ส่ง response ตาม action ─────────────────────────────────────
   if (result.action === 'lock') {
+    await logSecurityEvent(securityLogDb, {
+      userId: user.UserID,
+      email: user.Email,
+      eventType: 'account_locked',
+      ipAddress: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers['user-agent'],
+      failedAttempt: MAX_ATTEMPTS,
+      details: result.errorMessage,
+    });
     return res.status(403).json({ error: result.errorMessage, isLocked: true });
   }
   if (result.action === 'reject') {
+    await logSecurityEvent(securityLogDb, {
+      userId: user.UserID,
+      email: user.Email,
+      eventType: 'login_failed',
+      ipAddress: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers['user-agent'],
+      failedAttempt: result.attempts,
+      details: result.errorMessage,
+    });
     return res.status(401).json({ error: result.errorMessage });
   }
 
   // action === 'allow'
+  await logSecurityEvent(securityLogDb, {
+    userId: user.UserID,
+    email: user.Email,
+    eventType: 'login_success',
+    ipAddress: req.ip || req.connection?.remoteAddress,
+    userAgent: req.headers['user-agent'],
+    details: result.shouldResetCount ? 'success (counter reset)' : 'success',
+  });
+
   req.session.user = {
     id:   user.UserID,
     name: user.Name,
