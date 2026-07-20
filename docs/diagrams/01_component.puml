@@ -1,0 +1,134 @@
+@startuml component
+!theme plain
+title ระบบจองห้องผลิตสื่อดิจิทัล — Component Diagram\n(System Architecture)
+
+skinparam componentStyle rectangle
+skinparam roundCorner 8
+skinparam shadowing false
+skinparam ArrowColor #444444
+
+' ============ ACTORS ============
+actor "นักศึกษา /\nอาจารย์" as User
+actor "Admin" as Admin
+
+' ============ FRONTEND ============
+package "Frontend (Static HTML + Tailwind)" as FE {
+  [login.html] as FE_Login
+  [dashboard.html] as FE_Dash
+  [booking.html] as FE_Book
+  [maintenance.html] as FE_Maint
+  [change-password.html] as FE_Pw
+  [forgot-password.html] as FE_Forgot
+  [admin/dashboard.html] as FE_Admin
+}
+
+' ============ EDGE / WORKER ============
+cloud "Cloudflare Edge" as Edge {
+  component "Worker Entry\nsrc/index.js\n(Hono App)" as App
+  component "Cron Trigger\n(ทุก 5 นาที)" as Cron
+  component "scheduled/reminder.js\n(Email reminder)" as Reminder
+}
+
+' ============ MIDDLEWARE ============
+package "Middleware" as MW {
+  component "sessionMiddleware\n(cookie → KV)" as SessMW
+  component "requireAuth\n(require session)" as ReqAuth
+  component "requireAdmin\n(role='admin')" as ReqAdmin
+}
+
+' ============ ROUTES ============
+package "API Routes" as API {
+  component "auth.js\nlogin/logout/me\nchange-password" as R_Auth
+  component "bookings.js\ncreate/list/cancel" as R_Book
+  component "rooms.js\nlist/availability" as R_Rooms
+  component "queues.js\njoin/list/leave\n+ checkAndNotifyQueue" as R_Queue
+  component "maintenance.js\nreport/list/admin-update" as R_Maint
+  component "holidays.js" as R_Hol
+  component "password-reset.js\nforgot/reset" as R_PwReset
+
+  package "admin/" as AdminR {
+    component "bookings.js\napprove/reject" as RA_Book
+    component "users.js\nCRUD" as RA_User
+    component "holidays.js" as RA_Hol
+    component "reports.js" as RA_Rep
+    component "notify.js\n(bulk email)" as RA_Notify
+    component "password-requests.js" as RA_PwReq
+  }
+}
+
+' ============ UTILITIES ============
+package "Utils" as U {
+  component "bookingRules.js" as U_Rules
+  component "authLock.js\n(lock logic)" as U_Lock
+  component "password.js\n(bcrypt)" as U_Pw
+  component "mailer.js" as U_Mail
+  component "securityLog.js" as U_Log
+  component "config/db.js\n(prepared stmt)" as U_DB
+}
+
+' ============ EXTERNAL SERVICES ============
+database "Cloudflare KV\n(SESSIONS binding)\n• session data\n• reset tokens" as KV
+database "MySQL\n(TiDB / Aiven)\n9 tables" as DB
+queue "SMTP Server\n(nodemailer)" as SMTP
+
+' ============ RELATIONSHIPS ============
+User --> FE_Login
+User --> FE_Dash
+User --> FE_Book
+User --> FE_Maint
+User --> FE_Pw
+User --> FE_Forgot
+Admin --> FE_Login
+Admin --> FE_Admin
+
+FE_Login --> App : "POST /api/auth/login\nSet-Cookie: session="
+FE_Dash --> App : "GET /api/bookings\nGET /api/rooms"
+FE_Book --> App : "POST /api/bookings\nPATCH /:id/cancel"
+FE_Maint --> App : "POST/GET /api/maintenance"
+FE_Pw --> App : "POST /api/auth/change-password"
+FE_Forgot --> App : "POST /api/forgot-password[/reset]"
+FE_Admin --> App : "GET/PATCH/POST/DELETE\n/api/admin/*"
+
+App --> SessMW : "ทุก request"
+SessMW --> ReqAuth
+ReqAuth --> ReqAdmin : "(หากต้องการ admin)"
+ReqAuth --> API
+ReqAdmin --> API
+
+R_Auth --> U_Lock
+R_Auth --> U_Pw
+R_Auth --> U_Log
+R_Book --> U_Rules
+R_Book --> R_Queue : "checkAndNotifyQueue\n(on cancel)"
+R_Maint --> U_Mail
+R_PwReset --> U_Pw
+R_PwReset --> U_Mail
+RA_User --> U_Pw
+RA_Notify --> U_Mail
+RA_Book --> R_Queue : "notify คิว\n(on reject)"
+
+API --> U_DB
+U --> U_DB
+U_Mail --> SMTP
+
+SessMW --> KV : "get/put/delete\nsession"
+R_Auth --> KV : "createSession"
+R_PwReset --> KV : "reset-token (TTL 10m)"
+
+Cron --> Reminder
+Reminder --> U_DB
+Reminder --> U_Mail
+
+' ============ NOTES ============
+note right of KV
+  <b>Session lifetime:</b> 6 ชม.
+  HttpOnly + SameSite=Lax cookie
+end note
+
+note right of R_Book
+  <b>Auto-Approve:</b>
+  booking ใหม่ insert
+  Status='approved' ทันที
+end note
+
+@enduml

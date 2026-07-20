@@ -44,19 +44,34 @@ export async function sendEmail({ to, subject, text }, env) {
 }
 
 export async function notifyAdminNewBooking(bookingData, adminEmail, env) {
-  const subject = 'มีคำขอจองห้องใหม่';
+  const subject = 'มีการจองห้องใหม่';
   const text = `
-มีคำขอจองห้องใหม่:
+มีการจองห้องใหม่ (อนุมัติอัตโนมัติ):
 
 ห้อง: ${bookingData.RoomName} (ID: ${bookingData.RoomID})
 วันที่: ${bookingData.BookingDate}
 เวลา: ${bookingData.StartTime} - ${bookingData.EndTime}
 ผู้จอง: ${bookingData.UserName} (${bookingData.UserEmail})
 
-กรุณาเข้าสู่ระบบเพื่ออนุมัติหรือปฏิเสธการจอง
+ระบบได้อนุมัติการจองอัตโนมัติแล้ว
   `.trim();
 
   return await sendEmail({ to: adminEmail, subject, text }, env);
+}
+
+export async function notifyUserBookingConfirmed(bookingData, userEmail, env) {
+  const subject = 'การจองห้องสำเร็จ';
+  const text = `
+การจองห้องของคุณสำเร็จแล้ว:
+
+ห้อง: ${bookingData.RoomName}
+วันที่: ${bookingData.BookingDate}
+เวลา: ${bookingData.StartTime} - ${bookingData.EndTime}
+
+กรุณามาตามเวลาที่กำหนด
+  `.trim();
+
+  return await sendEmail({ to: userEmail, subject, text }, env);
 }
 
 export async function notifyBookingApproved(bookingData, userEmail, env) {

@@ -6,10 +6,13 @@ export async function executeQuery(sql, params = [], env) {
   if (!env.TIDB_PASSWORD) {
     throw new Error('Missing TIDB_PASSWORD secret');
   }
+  if (!env.TIDB_HOST || !env.TIDB_USER || !env.TIDB_DATABASE) {
+    throw new Error('Missing required TiDB secrets: TIDB_HOST, TIDB_USER, TIDB_DATABASE');
+  }
   if (!connection) {
-    const tidbHost = env.TIDB_HOST || 'gateway01.ap-southeast-1.prod.aws.tidbcloud.com';
-    const tidbUser = env.TIDB_USER || '2mnuCsWPGGp1yoy.root';
-    const tidbDatabase = env.TIDB_DATABASE || 'room_booking_system';
+    const tidbHost = env.TIDB_HOST;
+    const tidbUser = env.TIDB_USER;
+    const tidbDatabase = env.TIDB_DATABASE;
     
     connection = connect({
       url: `mysql://${tidbUser}:${env.TIDB_PASSWORD}@${tidbHost}/${tidbDatabase}`

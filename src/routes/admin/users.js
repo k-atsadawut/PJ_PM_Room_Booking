@@ -26,18 +26,40 @@ adminUsers.post('/', requireAdmin, async (c) => {
     return c.json({ error: 'รูปแบบข้อมูลไม่ถูกต้อง (invalid JSON body)' }, 400);
   }
 
-  const { Name, Email, Password, Role, Faculty, Department } = body;
+  const { FirstName, LastName, Email, EmailConfirmation, Password, Role, Faculty, Department } = body;
 
-  if (!Name || !Email || !Password || !Role) {
+  if (!FirstName || !LastName || !Email || !EmailConfirmation || !Password || !Role) {
     console.error('POST /api/admin/users — missing fields. received:', JSON.stringify(body));
     return c.json({ error: 'กรุณากรอกข้อมูลให้ครบถ้วน' }, 400);
   }
 
+  // ตรวจสอบรูปแบบอีเมล
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(Email)) {
+    return c.json({ error: 'รูปแบบอีเมลไม่ถูกต้อง' }, 400);
+  }
+
+  if (Email !== EmailConfirmation) {
+    return c.json({ error: 'อีเมลไม่ตรงกัน กรุณาตรวจสอบอีกครั้ง' }, 400);
+  }
+
+  // ตรวจสอบว่าอีเมลมีอยู่ในระบบแล้วหรือไม่
+  const existingUser = await executeQuery(
+    'SELECT UserID FROM users WHERE Email = ? LIMIT 1',
+    [Email],
+    c.env
+  );
+
+  if (existingUser.length > 0) {
+    return c.json({ error: 'อีเมลนี้มีผู้ใช้งานแล้ว กรุณาใช้อีเมลอื่น' }, 400);
+  }
+
+  const fullName = `${FirstName} ${LastName}`;
   const hashedPassword = await hashPassword(Password);
 
   const result = await executeQuery(
     'INSERT INTO users (Name, Email, Password, Role, Faculty, Department, force_change_password) VALUES (?, ?, ?, ?, ?, ?, 1)',
-    [Name, Email, hashedPassword, Role, Faculty, Department],
+    [fullName, Email, hashedPassword, Role, Faculty, Department],
     c.env
   );
 

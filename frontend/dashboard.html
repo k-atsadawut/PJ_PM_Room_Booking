@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard — ระบบจองห้อง</title>
+  <title>Dashboard — ระบบจองห้องผลิตสื่อดิจิทัล</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="/styles/tailwind-config.js"></script>
   <link rel="stylesheet" href="/styles/tokens.css">
@@ -16,17 +16,10 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     body { font-family: 'Inter', sans-serif; }
-    .card-hover:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1);
-    }
-    .status-available { background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); }
-    .status-booked { background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); }
-    .status-maintenance { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); }
   </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
-  <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary-600 text-white px-4 py-2 rounded-lg z-50">
+<body class="bg-gray-50 dark:bg-slate-900 min-h-screen transition-colors">
+  <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-blue-600 text-white px-4 py-2 rounded-lg z-50">
     ข้ามไปที่เนื้อหาหลัก
   </a>
   <div id="root"></div>
@@ -34,28 +27,81 @@
   <script type="text/babel">
     const { useState, useEffect } = React;
 
+    // ─── Icons ────────────────────────────────────────────────────────────
+    const Icon = {
+      Camera:    (p) => <svg {...p} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>,
+      Clock:     (p) => <svg {...p} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+      Calendar:  (p) => <svg {...p} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
+      Check:     (p) => <svg {...p} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+      Bell:      (p) => <svg {...p} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>,
+      Users:     (p) => <svg {...p} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 100-8 4 4 0 000 8zm6 0a3 3 0 100-6 3 3 0 000 6z" /></svg>,
+      Plus:      (p) => <svg {...p} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
+      Wrench:    (p) => <svg {...p} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
+      Logout:    (p) => <svg {...p} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>,
+      Sun:       (p) => <svg {...p} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" /></svg>,
+      Moon:      (p) => <svg {...p} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>,
+      X:         (p) => <svg {...p} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>,
+      QR:        (p) => <svg {...p} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 0h-1m-1 0v6h6m0-6v6m-6 0v6m6-6v6M4 4h6v6H4V4zm0 10h6v6H4v-6z" /></svg>,
+      Queue:     (p) => <svg {...p} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>,
+      Hourglass: (p) => <svg {...p} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4m0 14v-4m0-10h14M5 21h14m-9-7l-5 7m9-7l5 7m-9-7V3" /></svg>,
+    };
+
+    // ─── Helpers ──────────────────────────────────────────────────────────
+    function formatThaiDate(dateString, dateStyle = 'long') {
+      if (!dateString) return '';
+      const cleanDate = String(dateString).slice(0, 10);
+      return new Date(cleanDate + 'T00:00:00').toLocaleDateString('th-TH', { dateStyle });
+    }
+    function formatTime(timeStr) {
+      if (!timeStr) return '';
+      return String(timeStr).substring(0, 5);
+    }
+
+    const STATUS_LABEL = {
+      approved:  { label: 'อนุมัติแล้ว', badge: 'app-badge-green' },
+      rejected:  { label: 'ถูกปฏิเสธ',  badge: 'app-badge-red' },
+      cancelled: { label: 'ยกเลิกแล้ว', badge: 'app-badge-gray' },
+      pending:   { label: 'รออนุมัติ',   badge: 'app-badge-yellow' },
+    };
+
+    const MAINT_LABEL = {
+      pending:     { label: 'รอดำเนินการ',  badge: 'app-badge-yellow' },
+      in_progress: { label: 'กำลังดำเนินการ', badge: 'app-badge-blue' },
+      completed:   { label: 'เสร็จสิ้น',     badge: 'app-badge-green' },
+      rejected:    { label: 'ถูกปฏิเสธ',    badge: 'app-badge-red' },
+    };
+
+    const QUEUE_LABEL = {
+      waiting:   { label: 'กำลังรอ',  badge: 'app-badge-yellow' },
+      notified:  { label: 'แจ้งแล้ว',  badge: 'app-badge-blue' },
+      expired:   { label: 'หมดอายุ',  badge: 'app-badge-gray' },
+      cancelled: { label: 'ยกเลิก',   badge: 'app-badge-gray' },
+    };
+
+    // ─── Confirm Modal ────────────────────────────────────────────────────
     function ConfirmModal({ open, title, description, confirmText = 'ยืนยัน', cancelText = 'ยกเลิก', loading = false, onConfirm, onCancel }) {
       if (!open) return null;
       return (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden app-animate-in">
             <div className="p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-                  <p className="mt-3 text-sm leading-6 text-gray-600">{description}</p>
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">{title}</h3>
+                  <p className="mt-3 text-sm leading-6 text-gray-600 dark:text-gray-300">{description}</p>
                 </div>
-                <button type="button" onClick={onCancel} className="text-gray-400 hover:text-gray-600 transition" aria-label="ปิด">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                <button type="button" onClick={onCancel} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition" aria-label="ปิด">
+                  <Icon.X className="w-6 h-6" />
                 </button>
               </div>
               <div className="mt-6 flex justify-end gap-3">
-                <button type="button" onClick={onCancel} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
+                <button type="button" onClick={onCancel}
+                  className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 px-4 py-2 text-sm font-medium text-slate-700 dark:text-gray-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition">
                   {cancelText}
                 </button>
-                <button type="button" onClick={onConfirm} disabled={loading} className={`rounded-xl px-4 py-2 text-sm font-medium text-white transition ${loading ? 'bg-slate-300' : 'bg-blue-600 hover:bg-blue-700'}`}>
+                <button type="button" onClick={onConfirm} disabled={loading}
+                  className={loading ? 'rounded-xl px-4 py-2 text-sm font-medium text-white bg-slate-400 cursor-not-allowed'
+                                     : 'app-btn-primary rounded-xl px-4 py-2 text-sm font-medium'}>
                   {loading ? 'กำลังดำเนินการ...' : confirmText}
                 </button>
               </div>
@@ -65,263 +111,262 @@
       );
     }
 
-    const STATUS_LABEL = {
-      pending:   { label: 'รออนุมัติ',  color: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
-      approved:  { label: 'อนุมัติแล้ว', color: 'bg-green-100 text-green-800 border-green-200' },
-      rejected:  { label: 'ถูกปฏิเสธ',  color: 'bg-red-100 text-red-800 border-red-200' },
-      cancelled: { label: 'ยกเลิกแล้ว', color: 'bg-gray-100 text-gray-600 border-gray-200' },
-    };
-
-    function Navbar({ user }) {
+    // ─── Navbar ───────────────────────────────────────────────────────────
+    function Navbar({ user, unreadCount, onOpenNotifications, onLogout }) {
       const [currentTime, setCurrentTime] = useState(new Date());
       const [isDark, setIsDark] = useState(document.documentElement.classList.contains('dark'));
-      
+
       useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        
-        const handleThemeChange = (e) => {
-          setIsDark(document.documentElement.classList.contains('dark'));
-        };
+        const handleThemeChange = () => setIsDark(document.documentElement.classList.contains('dark'));
         window.addEventListener('themeChanged', handleThemeChange);
-        
-        return () => {
-          clearInterval(timer);
-          window.removeEventListener('themeChanged', handleThemeChange);
-        };
+        return () => { clearInterval(timer); window.removeEventListener('themeChanged', handleThemeChange); };
       }, []);
 
+      const roleLabel = user?.role === 'teacher' ? 'อาจารย์' : user?.role === 'admin' ? 'ผู้ดูแลระบบ' : 'นักศึกษา';
+
       return (
-        <nav className="bg-white shadow-sm px-6 py-4">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <div className="hidden sm:block">
-                <span className="font-bold text-gray-800">ระบบจองห้องผลิตสื่อดิจิทัล</span>
-                <p className="text-xs text-gray-500">มหาวิทยาลัยนอร์ทกรุงเทพ</p>
-              </div>
-              <div className="block sm:hidden">
-                <span className="font-bold text-gray-800 text-sm">จองห้องผลิตสื่อ</span>
-              </div>
+        <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3 flex items-center justify-between shadow-sm sticky top-0 z-40 transition-colors">
+          <div className="flex items-center gap-3">
+            <div className="app-logo-gradient-sm w-9 h-9 rounded-xl flex items-center justify-center">
+              <Icon.Camera className="w-5 h-5 text-white" />
             </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right hidden sm:block">
-                <div className="text-sm font-semibold text-gray-800">{currentTime.toLocaleTimeString('th-TH')}</div>
-                <div className="text-xs text-gray-500">{currentTime.toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
-              </div>
-              <div className="h-8 w-px bg-gray-200 hidden sm:block"></div>
-              <div className="flex items-center gap-3">
-                <div className="text-right hidden md:block">
-                  <div className="text-sm font-medium text-gray-800">{user?.name}</div>
-                  <div className="text-xs text-gray-500">{user?.role === 'teacher' ? 'อาจารย์' : 'นักศึกษา'}</div>
-                </div>
-                <a href="/maintenance.html"
-                  className="bg-orange-50 hover:bg-orange-100 text-orange-600 text-sm font-medium px-4 py-2 rounded-xl transition flex items-center gap-2 border border-orange-200">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  แจ้งซ่อม
-                </a>
-                <a href="/booking.html"
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  จองห้อง
-                </a>
-                <button 
-                  onClick={() => window.toggleTheme()} 
-                  className="text-gray-500 hover:text-blue-600 transition p-2 rounded-lg hover:bg-gray-100"
-                  aria-label="เปลี่ยนธีม"
-                >
-                  {isDark ? (
-                    <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                    </svg>
-                  )}
-                </button>
-                <button onClick={logout} className="text-gray-500 hover:text-red-500 transition p-2" aria-label="ออกจากระบบ">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                </button>
-              </div>
+            <div>
+              <div className="text-sm font-semibold text-gray-800 dark:text-gray-100 leading-tight">ระบบจองห้องผลิตสื่อดิจิทัล</div>
+              <div className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">มหาวิทยาลัยนอร์ทกรุงเทพ</div>
             </div>
           </div>
-        </nav>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-slate-700/50 px-3 py-1.5 rounded-lg font-mono">
+              <Icon.Clock className="w-3 h-3" />
+              {currentTime.toLocaleTimeString('th-TH')}
+            </div>
+            <button onClick={onOpenNotifications} className="relative w-9 h-9 rounded-full flex items-center justify-center bg-gray-100 dark:bg-slate-700/50 hover:bg-gray-200 dark:hover:bg-slate-700 transition"
+              aria-label={`การแจ้งเตือน ${unreadCount} รายการที่ยังไม่ได้อ่าน`}>
+              <Icon.Bell className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-semibold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </button>
+            <div className="hidden sm:flex flex-col items-end">
+              <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{user?.name}</span>
+              <span className="text-[11px] text-gray-500 dark:text-gray-400">{roleLabel}</span>
+            </div>
+            <button onClick={() => window.toggleTheme()}
+              className="w-9 h-9 rounded-full flex items-center justify-center bg-gray-100 dark:bg-slate-700/50 hover:bg-gray-200 dark:hover:bg-slate-700 transition"
+              aria-label="สลับธีม">
+              {isDark ? <Icon.Sun className="w-4 h-4 text-yellow-400" /> : <Icon.Moon className="w-4 h-4 text-slate-600" />}
+            </button>
+            <a href="/maintenance.html"
+              className="flex items-center gap-1.5 text-xs font-medium text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 px-3 py-1.5 rounded-lg transition">
+              <Icon.Wrench className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">แจ้งซ่อม</span>
+            </a>
+            <a href="/booking.html"
+              className="flex items-center gap-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg transition">
+              <Icon.Plus className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">จองห้อง</span>
+            </a>
+            <button onClick={onLogout}
+              className="flex items-center gap-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 px-3 py-1.5 rounded-lg transition"
+              aria-label="ออกจากระบบ">
+              <Icon.Logout className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">ออกจากระบบ</span>
+            </button>
+          </div>
+        </header>
       );
     }
 
-    function StatCard({ icon, label, value, color }) {
+    // ─── Stats Card ───────────────────────────────────────────────────────
+    function StatsCard({ label, value, icon, color }) {
       return (
-        <div className="bg-white rounded-2xl border p-5 card-hover transition-all duration-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 mb-1">{label}</p>
-              <p className="text-2xl font-bold text-gray-800">{value}</p>
-            </div>
-            <div className={`w-12 h-12 rounded-xl ${color} flex items-center justify-center`}>
-              {icon}
-            </div>
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 flex items-center gap-4 transition-shadow hover:shadow-md">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${color}`}>
+            {icon}
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-gray-800 dark:text-gray-100">{value}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
           </div>
         </div>
       );
     }
 
-    function RoomStatusCard({ room, onBook, onViewDetails, onShowQR }) {
-      const statusConfig = {
-        available: { 
-          label: 'ว่าง', 
-          bg: 'status-available', 
-          text: 'text-green-800',
-          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-        },
-        booked: { 
-          label: 'ไม่ว่าง', 
-          bg: 'status-booked', 
-          text: 'text-red-800',
-          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-        },
-        maintenance: { 
-          label: 'ปิดปรับปรุง', 
-          bg: 'status-maintenance', 
-          text: 'text-yellow-800',
-          icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-        }
-      };
-      
-      const config = statusConfig[room.Status] || statusConfig.available;
+    // ─── Room Card ────────────────────────────────────────────────────────
+    function RoomCard({ room, onBook, onViewDetails, onShowQR }) {
+      const statusKey = room.current_status || room.RoomStatus || room.Status || 'available';
+      const cfg = {
+        available:   { label: 'ว่าง',       badge: 'app-badge-green',  dot: 'app-dot-green' },
+        booked:      { label: 'ไม่ว่าง',     badge: 'app-badge-red',    dot: 'app-dot-red' },
+        maintenance: { label: 'ปิดปรับปรุง', badge: 'app-badge-yellow', dot: 'app-dot-yellow' },
+      }[statusKey] || { label: 'ว่าง', badge: 'app-badge-green', dot: 'app-dot-green' };
 
       return (
-        <div className="bg-white rounded-2xl border p-5 card-hover transition-all duration-200">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h3 className="font-semibold text-gray-800">{room.RoomName}</h3>
-              <p className="text-sm text-gray-500 mt-1">ความจุ {room.Capacity} คน</p>
-            </div>
-            <div className={`px-3 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text} border border-current/20`}>
-              {config.label}
-            </div>
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 flex flex-col gap-3 transition-shadow hover:shadow-md">
+          <div className="flex items-start justify-between">
+            <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center text-xl">🎬</div>
+            <span className={`app-badge ${cfg.badge}`}>
+              <span className={`app-badge-dot ${cfg.dot}`} />
+              {cfg.label}
+            </span>
           </div>
-          
-          {room.Status === 'booked' && room.current_booking && (
-            <div className="bg-red-50 rounded-xl p-3 mb-3">
-              <div className="flex items-center gap-2 text-sm text-red-700">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                <span className="font-medium">{room.current_booking.user}</span>
-              </div>
-              <p className="text-xs text-red-600 mt-1">จนถึง {room.current_booking.end}</p>
-            </div>
-          )}
-          
-          {room.Status === 'maintenance' && (
-            <div className="bg-yellow-50 rounded-xl p-3 mb-3">
-              <p className="text-xs text-yellow-700">{room.maintenance_reason || 'รอการซ่อมบำรุง'}</p>
-            </div>
-          )}
-          
+          <div>
+            <h3 className="font-semibold text-gray-800 dark:text-gray-100">{room.RoomName}</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{room.Description || 'ไม่มีคำอธิบาย'}</p>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+            <Icon.Users className="w-3.5 h-3.5" />
+            <span>ความจุ {room.Capacity} คน</span>
+          </div>
+
           {room.bookings_today?.length > 0 && (
-            <div className="space-y-2 mb-3">
-              {room.bookings_today.map((bk, i) => (
-                <div key={i} className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-3 py-2">
-                  <span className="text-gray-600">{bk.start} - {bk.end}</span>
-                  <span className={`px-2 py-0.5 rounded-full ${STATUS_LABEL[bk.status]?.color}`}>
-                    {STATUS_LABEL[bk.status]?.label}
-                  </span>
+            <div className="text-[11px] text-gray-500 dark:text-gray-400 space-y-1">
+              <div className="font-medium">ช่วงที่ถูกใช้งาน:</div>
+              {room.bookings_today.slice(0, 3).map((bk, i) => (
+                <div key={i} className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded px-2 py-0.5 font-mono">
+                  {formatTime(bk.start)}–{formatTime(bk.end)}
                 </div>
               ))}
             </div>
           )}
-          
-          {room.Status === 'available' && (
-            <button 
-              onClick={() => onBook(room)}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 rounded-xl transition"
-            >
-              จองห้องนี้
+
+          <button
+            onClick={() => onBook(room)}
+            disabled={statusKey !== 'available'}
+            className={`w-full py-2 rounded-xl text-sm font-medium transition ${
+              statusKey === 'available'
+                ? 'app-btn-primary'
+                : 'bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+            }`}>
+            {statusKey === 'available' ? 'จองห้องนี้' : statusKey === 'booked' ? 'ห้องไม่ว่าง' : 'ปิดปรับปรุง'}
+          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={() => onViewDetails(room)}
+              className="py-2 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-slate-700/50 hover:bg-gray-100 dark:hover:bg-slate-700 transition border border-slate-200 dark:border-slate-700">
+              รายละเอียด
             </button>
-          )}
-
-          <button 
-            onClick={() => onViewDetails(room)}
-            className="w-full mt-2 bg-gray-50 hover:bg-gray-150 text-gray-700 text-sm font-medium py-2 rounded-xl transition border border-gray-200"
-          >
-            ดูรายละเอียดห้อง
-          </button>
-
-          <button 
-            onClick={() => onShowQR(room)}
-            className="w-full mt-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm font-medium py-2 rounded-xl transition border border-indigo-200 flex items-center justify-center gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m0 11v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
-            </svg>
-            QR Code แจ้งซ่อม
-          </button>
+            <button onClick={() => onShowQR(room)}
+              className="flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition border border-indigo-200 dark:border-indigo-800">
+              <Icon.QR className="w-3.5 h-3.5" />
+              QR แจ้งซ่อม
+            </button>
+          </div>
         </div>
       );
     }
 
-    function formatThaiDate(dateString, dateStyle = 'long') {
-      if (!dateString) return '';
-      // Extract YYYY-MM-DD to avoid timezone shift and parse invalid dates
-      const cleanDate = String(dateString).slice(0, 10);
-      return new Date(cleanDate + 'T00:00:00').toLocaleDateString('th-TH', { dateStyle });
+    // ─── Notifications Modal ──────────────────────────────────────────────
+    function NotificationsModal({ open, notifications, onClose, onMarkRead, onMarkAllRead }) {
+      const [loadingId, setLoadingId] = useState(null);
+      if (!open) return null;
+
+      const handleMarkRead = async (id) => {
+        setLoadingId(id);
+        try { await onMarkRead(id); } finally { setLoadingId(null); }
+      };
+
+      return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col app-animate-in">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+              <h3 className="font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                <Icon.Bell className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                การแจ้งเตือน
+              </h3>
+              <div className="flex items-center gap-2">
+                <button onClick={onMarkAllRead} className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 font-medium">
+                  อ่านทั้งหมด
+                </button>
+                <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition" aria-label="ปิด">
+                  <Icon.X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="overflow-y-auto flex-1 divide-y divide-slate-100 dark:divide-slate-700">
+              {notifications.length === 0 ? (
+                <div className="text-center py-12 text-gray-500 dark:text-gray-400 text-sm">ไม่มีการแจ้งเตือน</div>
+              ) : notifications.map(n => (
+                <div key={n.NotificationID} className={`p-4 ${n.IsRead ? 'bg-transparent' : 'bg-blue-50/50 dark:bg-blue-900/10'}`}>
+                  <div className="flex items-start gap-3">
+                    <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${n.IsRead ? 'bg-transparent' : 'bg-blue-500'}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-700 dark:text-gray-200">{n.Message}</p>
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-[11px] text-gray-400">{n.created_at ? new Date(n.created_at).toLocaleString('th-TH') : ''}</p>
+                        {!n.IsRead && (
+                          <button onClick={() => handleMarkRead(n.NotificationID)} disabled={loadingId === n.NotificationID}
+                            className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 font-medium">
+                            {loadingId === n.NotificationID ? '...' : 'อ่านแล้ว'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
     }
 
+    // ─── Dashboard ────────────────────────────────────────────────────────
     function Dashboard() {
-      const [user, setUser]         = useState(null);
-      const [bookings, setBookings] = useState([]);
-      const [rooms, setRooms]       = useState([]);
-      const [loading, setLoading]   = useState(true);
-      const [holidays, setHolidays] = useState([]);
+      const [user, setUser]           = useState(null);
+      const [bookings, setBookings]   = useState([]);
+      const [rooms, setRooms]         = useState([]);
+      const [queues, setQueues]       = useState([]);
+      const [notifications, setNotifications] = useState([]);
+      const [unreadCount, setUnreadCount] = useState(0);
+      const [showNotifModal, setShowNotifModal] = useState(false);
+      const [maintenanceReports, setMaintenanceReports] = useState([]);
+      const [holidays, setHolidays]   = useState([]);
       const [showHolidayPopup, setShowHolidayPopup] = useState(false);
       const [upcomingHolidays, setUpcomingHolidays] = useState([]);
-      const [showUpcomingHolidaysPopup, setShowUpcomingHolidaysPopup] = useState(false);
+      const [showUpcomingPopup, setShowUpcomingPopup] = useState(false);
+      const [loading, setLoading]     = useState(true);
       const [globalError, setGlobalError] = useState('');
       const [selectedDetailRoom, setSelectedDetailRoom] = useState(null);
-      const [maintenanceReports, setMaintenanceReports] = useState([]);
-      const [qrRoom, setQrRoom] = useState(null);
-      const [confirmState, setConfirmState] = useState({
-        open: false,
-        title: '',
-        description: '',
-        confirmText: 'ยืนยัน',
-        cancelText: 'ยกเลิก',
-        loading: false,
-        onConfirm: null,
-      });
+      const [qrRoom, setQrRoom]       = useState(null);
+      const [confirmState, setConfirmState] = useState({ open: false, onConfirm: null, loading: false, title: '', description: '', confirmText: 'ยืนยัน', cancelText: 'ยกเลิก' });
 
       useEffect(() => {
         requireLogin(['student', 'teacher']).then(u => {
           if (!u) return;
           setUser(u);
+          loadAll();
           loadHolidays();
-          loadData();
           loadUpcomingHolidays();
         });
       }, []);
 
-      async function loadData() {
+      // Poll notification count every 30s while on the page.
+      useEffect(() => {
+        if (!user) return;
+        const t = setInterval(() => loadUnreadCount(), 30000);
+        return () => clearInterval(t);
+      }, [user]);
+
+      async function loadAll() {
         try {
-          const [bookingsData, roomsData, maintenanceData] = await Promise.all([
-            apiFetch('/api/bookings'),
-            apiFetch('/api/rooms'),
-            apiFetch('/api/maintenance').catch(() => [])
+          const [bookingsData, roomsData, maintenanceData, queuesData, notifData, unreadData] = await Promise.all([
+            apiFetch('/api/bookings').catch(() => []),
+            apiFetch('/api/rooms').catch(() => []),
+            apiFetch('/api/maintenance').catch(() => []),
+            apiFetch('/api/queues').catch(() => []),
+            apiFetch('/api/notifications').catch(() => []),
+            apiFetch('/api/notifications/unread-count').catch(() => ({ count: 0 })),
           ]);
-          setBookings(bookingsData);
-          setRooms(roomsData);
+          setBookings(bookingsData || []);
+          setRooms(roomsData || []);
           setMaintenanceReports(maintenanceData || []);
+          setQueues(queuesData || []);
+          setNotifications(notifData || []);
+          setUnreadCount(unreadData?.count || 0);
         } catch (e) {
           setGlobalError('ไม่สามารถโหลดข้อมูลได้: ' + (e.message || 'Unknown error'));
         } finally {
@@ -329,15 +374,21 @@
         }
       }
 
+      async function loadUnreadCount() {
+        try {
+          const data = await apiFetch('/api/notifications/unread-count');
+          setUnreadCount(data?.count || 0);
+        } catch {}
+      }
+
       async function loadHolidays() {
         try {
           const holidayData = await apiFetch('/api/holidays/today');
           if (holidayData) {
             setHolidays([holidayData]);
+            setShowHolidayPopup(true);
           }
-        } catch (e) {
-          console.error(e);
-        }
+        } catch {}
       }
 
       async function loadUpcomingHolidays() {
@@ -346,426 +397,301 @@
           const data = await apiFetch('/api/holidays');
           if (data && data.length > 0) {
             setUpcomingHolidays(data);
-            setShowUpcomingHolidaysPopup(true);
+            setShowUpcomingPopup(true);
           }
-        } catch (e) {
-          console.error(e);
-        }
+        } catch {}
       }
 
-      function openConfirm({ title, description, confirmText = 'ยืนยัน', cancelText = 'ยกเลิก', onConfirm }) {
-        setConfirmState({ open: true, title, description, confirmText, cancelText, loading: false, onConfirm });
-      }
-
-      function closeConfirm() {
-        setConfirmState(prev => ({ ...prev, open: false, loading: false, onConfirm: null }));
-      }
-
+      function openConfirm(opts) { setConfirmState({ ...opts, open: true, loading: false }); }
+      function closeConfirm()    { setConfirmState(prev => ({ ...prev, open: false, onConfirm: null })); }
       async function handleConfirm() {
-        if (!confirmState.onConfirm) {
-          closeConfirm();
-          return;
-        }
+        if (!confirmState.onConfirm) return closeConfirm();
         setConfirmState(prev => ({ ...prev, loading: true }));
-        try {
-          await confirmState.onConfirm();
-        } finally {
-          closeConfirm();
-        }
+        try { await confirmState.onConfirm(); } finally { closeConfirm(); }
       }
 
       function cancelBooking(id) {
         openConfirm({
           title: 'ยืนยันการยกเลิกการจอง',
-          description: 'คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการจองนี้? ข้อมูลการจองจะถูกเปลี่ยนเป็นสถานะยกเลิก',
+          description: 'คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการจองนี้? ระบบจะแจ้งเตือนผู้ที่อยู่ในคิวรอถัดไปโดยอัตโนมัติ',
           confirmText: 'ยืนยันการยกเลิก',
           cancelText: 'ยกเลิก',
           onConfirm: async () => {
             try {
               await apiFetch(`/api/bookings/${id}/cancel`, { method: 'PATCH' });
-              await loadData();
+              await loadAll();
             } catch (e) {
               setGlobalError('ไม่สามารถยกเลิกการจองได้: ' + (e.message || 'Unknown error'));
             }
-          }
+          },
         });
       }
 
-      function handleBookRoom(room) {
-        window.location.href = `/booking.html?roomId=${room.RoomID}`;
+      function leaveQueue(id) {
+        openConfirm({
+          title: 'ออกจากคิวรอ',
+          description: 'คุณต้องการออกจากคิวรอการจองนี้ใช่หรือไม่?',
+          confirmText: 'ออกจากคิว',
+          onConfirm: async () => {
+            try {
+              await apiFetch(`/api/queues/${id}`, { method: 'DELETE' });
+              await loadAll();
+            } catch (e) {
+              setGlobalError('ไม่สามารถออกจากคิวได้: ' + (e.message || 'Unknown error'));
+            }
+          },
+        });
       }
 
-      function handleShowQR(room) {
-        setQrRoom(room);
+      async function markNotificationRead(id) {
+        await apiFetch(`/api/notifications/${id}/read`, { method: 'PATCH' });
+        await loadAll();
+      }
+
+      async function markAllNotificationsRead() {
+        await apiFetch('/api/notifications/read-all', { method: 'PATCH' });
+        await loadAll();
       }
 
       if (!user) return <div className="text-center mt-20 text-gray-400">กำลังโหลด...</div>;
 
+      const todayStr = new Date().toDateString();
       const stats = {
-        todayBookings: bookings.filter(b => b.Status === 'approved' && new Date(String(b.BookingDate).slice(0, 10) + 'T00:00:00').toDateString() === new Date().toDateString()).length,
-        pending: bookings.filter(b => b.Status === 'pending').length,
-        approved: bookings.filter(b => b.Status === 'approved').length,
+        todayBookings: bookings.filter(b => b.Status === 'approved' && new Date(String(b.BookingDate).slice(0, 10) + 'T00:00:00').toDateString() === todayStr).length,
+        approved:      bookings.filter(b => b.Status === 'approved').length,
       };
 
       return (
         <div>
-          <header role="banner">
-            <Navbar user={user} />
-          </header>
+          <header role="banner"><Navbar user={user} unreadCount={unreadCount} onOpenNotifications={() => setShowNotifModal(true)} onLogout={logout} /></header>
 
           {globalError && (
             <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-              <div className="bg-red-50 border border-red-200 text-red-700 rounded-2xl px-4 py-3 mb-4 flex items-start justify-between gap-4" role="alert">
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-2xl px-4 py-3 mb-4 flex items-start justify-between gap-4" role="alert">
                 <div>
                   <p className="text-sm font-semibold">เกิดข้อผิดพลาด</p>
                   <p className="mt-1 text-sm">{globalError}</p>
                 </div>
-                <button onClick={() => setGlobalError('')} className="text-red-500 hover:text-red-700 transition" aria-label="ปิดข้อความข้อผิดพลาด">×</button>
+                <button onClick={() => setGlobalError('')} className="text-red-500 hover:text-red-700" aria-label="ปิด">×</button>
               </div>
             </div>
           )}
 
-          {/* Holiday Popup */}
-          {showHolidayPopup && (
+          {/* Today Holiday Modal */}
+          {showHolidayPopup && holidays[0] && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-[28px] max-w-md w-full p-8 shadow-2xl border border-gray-100 flex flex-col items-center">
-                
-                {/* Centered Icon Header */}
-                <div className="w-16 h-16 bg-[#fee2e2] rounded-2xl flex items-center justify-center mb-4">
-                  <svg className="w-8 h-8 text-[#ef4444]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
+              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl max-w-md w-full p-8 shadow-2xl flex flex-col items-center app-animate-in">
+                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/40 rounded-2xl flex items-center justify-center mb-4">
+                  <Icon.Calendar className="w-8 h-8 text-red-500" />
                 </div>
-
-                <h3 className="text-xl font-bold text-gray-900 text-center mb-1">วันนี้เป็นวันหยุด</h3>
-                <p className="text-sm text-gray-500 text-center mb-6">ระบบไม่เปิดให้ใช้งาน</p>
-
-                {/* Holiday Info Item */}
+                <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 text-center mb-1">วันนี้เป็นวันหยุด</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">ระบบไม่เปิดให้จองห้อง แต่คุณยังสามารถจองล่วงหน้าได้</p>
                 <div className="space-y-3 mb-6 w-full">
                   {holidays.map(h => (
-                    <div key={h.HolidayID} className="flex items-center gap-4 p-4 bg-[#fdf2f2] rounded-[18px] border border-[#fde2e2] w-full">
-                      <div className="w-5 h-5 flex items-center justify-center flex-shrink-0 text-[#ef4444]">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </div>
+                    <div key={h.HolidayID} className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl w-full">
+                      <Icon.Calendar className="w-5 h-5 text-red-500 flex-shrink-0" />
                       <div className="flex-1 text-left">
-                        <div className="font-bold text-gray-800 text-sm">
-                          {formatThaiDate(h.HolidayDate)}
-                        </div>
-                        {h.Description && (
-                          <div className="text-xs text-gray-500 mt-1">{h.Description}</div>
-                        )}
+                        <div className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{formatThaiDate(h.HolidayDate)}</div>
+                        {h.Description && <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{h.Description}</div>}
                       </div>
                     </div>
                   ))}
                 </div>
-                <button
-                  onClick={logout}
-                  className="w-full bg-[#ef4444] hover:bg-[#dc2626] text-white font-medium py-3 px-6 rounded-2xl transition-all duration-200 active:scale-[0.98] shadow-md hover:shadow-lg"
-                  aria-label="ออกจากระบบ"
-                >
-                  ออกจากระบบ
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Upcoming Holidays Popup */}
-          {showUpcomingHolidaysPopup && (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-[28px] max-w-md w-full p-8 shadow-2xl border border-gray-100 flex flex-col items-center">
-                
-                {/* Centered Icon Header */}
-                <div className="w-16 h-16 bg-[#e0e7ff] rounded-2xl flex items-center justify-center mb-4">
-                  <svg className="w-8 h-8 text-[#4f46e5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z M3 3l18 18" />
-                  </svg>
-                </div>
-
-                <h3 className="text-xl font-bold text-gray-900 text-center mb-1">ประกาศวันหยุดทำการ</h3>
-                <p className="text-sm text-gray-500 text-center mb-6">โปรดวางแผนการใช้งานหรือจองห้องล่วงหน้า</p>
-
-                {/* Holiday List Items */}
-                <div className="space-y-3 mb-6 max-h-60 overflow-y-auto pr-1 w-full">
-                  {upcomingHolidays.map(h => (
-                    <div key={h.HolidayID} className="flex items-center gap-4 p-4 bg-[#f8faff] rounded-[18px] border border-[#e0e7ff]">
-                      <div className="w-5 h-5 flex items-center justify-center flex-shrink-0 text-[#4f46e5]">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-bold text-gray-800 text-sm">
-                          {formatThaiDate(h.HolidayDate)}
-                        </div>
-                        {h.Description && (
-                          <div className="text-xs text-gray-500 mt-1">{h.Description}</div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  onClick={() => {
-                    sessionStorage.removeItem('showHolidayPopup');
-                    setShowUpcomingHolidaysPopup(false);
-                  }}
-                  className="w-full bg-[#4f46e5] hover:bg-[#4338ca] text-white font-medium py-3 px-6 rounded-2xl transition-all duration-200 active:scale-[0.98] shadow-md hover:shadow-lg"
-                  aria-label="รับทราบ"
-                >
+                <button onClick={() => setShowHolidayPopup(false)} className="app-btn-primary w-full py-3 rounded-xl font-semibold text-sm">
                   รับทราบ
                 </button>
               </div>
             </div>
           )}
 
-
-          <main id="main-content" role="main" className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-            {/* Welcome Section */}
-            <div className="mb-6 sm:mb-8">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
-                สวัสดี, {user.name} 👋
-              </h1>
-              <p className="text-gray-500 mt-1 text-sm sm:text-base">จองห้องและติดตามสถานะการจองของคุณ</p>
-            </div>
-
-            {holidays.length > 0 && holidays[0] && (
-              <div className="mb-6 sm:mb-8 bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 flex items-start gap-3 sm:gap-4 shadow-sm">
-                <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0 text-amber-600">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
+          {/* Upcoming Holidays Modal */}
+          {showUpcomingPopup && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl max-w-md w-full p-8 shadow-2xl flex flex-col items-center app-animate-in">
+                <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/40 rounded-2xl flex items-center justify-center mb-4">
+                  <Icon.Calendar className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
                 </div>
-                <div className="text-left">
-                  <h3 className="font-bold text-amber-800 text-sm sm:text-base">วันนี้เป็นวันหยุดทำการ ({holidays[0].Description || 'วันหยุดพิเศษ'})</h3>
-                  <p className="text-xs sm:text-sm text-amber-700 mt-1">
-                    ระบบปิดให้บริการจองห้องสำหรับวันนี้ ขออภัยในความไม่สะดวก อย่างไรก็ตาม ท่านยังคงสามารถเข้าใช้งานเพื่อทำรายการหรือกดเลือกจองห้องล่วงหน้าสำหรับวันทำการอื่นๆ ได้ตามปกติ
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-              <StatCard
-                icon={<svg className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
-                label="จองวันนี้"
-                value={stats.todayBookings}
-                color="bg-blue-100"
-              />
-              <StatCard
-                icon={<svg className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-                label="รออนุมัติ"
-                value={stats.pending}
-                color="bg-yellow-100"
-              />
-              <StatCard
-                icon={<svg className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-                label="อนุมัติแล้ว"
-                value={stats.approved}
-                color="bg-green-100"
-              />
-              <StatCard
-                icon={<svg className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>}
-                label="แจ้งเตือน"
-                value="0"
-                color="bg-purple-100"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-              {/* Room Status */}
-              <div className="lg:col-span-2">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-base sm:text-lg font-bold text-gray-800">สถานะห้องแบบเรียลไทม์</h2>
-                  <a href="/booking.html" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                    ดูทั้งหมด →
-                  </a>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  {rooms.slice(0, 4).map(room => (
-                    <RoomStatusCard key={room.RoomID} room={room} onBook={handleBookRoom} onViewDetails={setSelectedDetailRoom} onShowQR={handleShowQR} />
+                <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 text-center mb-1">ประกาศวันหยุดทำการ</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">โปรดวางแผนการใช้งานหรือจองห้องล่วงหน้า</p>
+                <div className="space-y-3 mb-6 max-h-60 overflow-y-auto w-full">
+                  {upcomingHolidays.map(h => (
+                    <div key={h.HolidayID} className="flex items-center gap-3 p-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-xl">
+                      <Icon.Calendar className="w-5 h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+                      <div className="flex-1 text-left">
+                        <div className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{formatThaiDate(h.HolidayDate)}</div>
+                        {h.Description && <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{h.Description}</div>}
+                      </div>
+                    </div>
                   ))}
                 </div>
+                <button onClick={() => { sessionStorage.removeItem('showHolidayPopup'); setShowUpcomingPopup(false); }}
+                  className="app-btn-primary w-full py-3 rounded-xl font-semibold text-sm">
+                  รับทราบ
+                </button>
               </div>
+            </div>
+          )}
 
-              {/* Quick Book */}
-              <div>
-                <h2 className="text-base sm:text-lg font-bold text-gray-800 mb-4">จองห้องด่วน</h2>
-                <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-4 sm:p-6 text-white">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                      <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-sm sm:text-base">จองห้องทันที</h3>
-                      <p className="text-xs sm:text-sm text-blue-100">เลือกห้องและเวลาที่ต้องการ</p>
-                    </div>
-                  </div>
-                  <a href="/booking.html" className="block w-full bg-white text-blue-600 text-center font-semibold py-2 sm:py-3 rounded-xl hover:bg-blue-50 transition text-sm sm:text-base">
-                    เริ่มจองห้อง
-                  </a>
-                </div>
+          <main id="main-content" role="main" className="p-6 max-w-7xl mx-auto space-y-6">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">สวัสดี, {user.name} 👋</h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">ยินดีต้อนรับสู่ระบบจองห้องผลิตสื่อดิจิทัล</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <StatsCard label="การจองวันนี้" value={stats.todayBookings} color="bg-blue-100 dark:bg-blue-900/30"
+                icon={<Icon.Calendar className="w-6 h-6 text-blue-600 dark:text-blue-400" />} />
+              <StatsCard label="อนุมัติแล้ว" value={stats.approved} color="bg-green-100 dark:bg-green-900/30"
+                icon={<Icon.Check className="w-6 h-6 text-green-600 dark:text-green-400" />} />
+              <StatsCard label="แจ้งเตือนที่ยังไม่อ่าน" value={unreadCount} color="bg-purple-100 dark:bg-purple-900/30"
+                icon={<Icon.Bell className="w-6 h-6 text-purple-600 dark:text-purple-400" />} />
+            </div>
+
+            {/* Room Status */}
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">สถานะห้องทั้งหมด</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {rooms.map(room => (
+                  <RoomCard key={room.RoomID} room={room}
+                    onBook={(r) => window.location.href = `/booking.html?roomId=${r.RoomID}`}
+                    onViewDetails={setSelectedDetailRoom}
+                    onShowQR={setQrRoom} />
+                ))}
               </div>
             </div>
 
             {/* My Bookings */}
-            <div className="mt-6 sm:mt-8">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-base sm:text-lg font-bold text-gray-800">การจองของฉัน</h2>
-                <a href="/booking.html" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                  จองห้องใหม่ →
-                </a>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">ประวัติการจองของฉัน</h2>
+              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/30">
+                        <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">ห้อง</th>
+                        <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">วันที่</th>
+                        <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">เวลา</th>
+                        <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">สถานะ</th>
+                        <th className="text-right px-4 py-3 font-medium text-gray-500 dark:text-gray-400">จัดการ</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                      {loading ? (
+                        <tr><td colSpan="5" className="text-center py-12 text-gray-400">กำลังโหลด...</td></tr>
+                      ) : bookings.length === 0 ? (
+                        <tr><td colSpan="5" className="text-center py-12 text-gray-500 dark:text-gray-400">ยังไม่มีประวัติการจอง</td></tr>
+                      ) : bookings.map(b => {
+                        const s = STATUS_LABEL[b.Status] || { label: b.Status, badge: 'app-badge-gray' };
+                        const canCancel = b.Status === 'approved';
+                        return (
+                          <tr key={b.BookingID} className="hover:bg-gray-50 dark:hover:bg-slate-700/30 transition">
+                            <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-100">{b.RoomName}</td>
+                            <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{formatThaiDate(b.BookingDate)}</td>
+                            <td className="px-4 py-3 text-gray-600 dark:text-gray-300 font-mono text-xs">{formatTime(b.StartTime)}–{formatTime(b.EndTime)}</td>
+                            <td className="px-4 py-3"><span className={`app-badge ${s.badge}`}>{s.label}</span></td>
+                            <td className="px-4 py-3 text-right">
+                              {canCancel && (
+                                <button onClick={() => cancelBooking(b.BookingID)}
+                                  className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 font-medium transition">
+                                  ยกเลิก
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
+            </div>
 
-              {loading ? (
-                <div className="text-center text-gray-400 py-12">กำลังโหลด...</div>
-              ) : bookings.length === 0 ? (
-                <div className="text-center py-12 sm:py-16 bg-white rounded-2xl border">
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
+            {/* My Queue */}
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
+                <Icon.Queue className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                คิวรอการจองของฉัน
+              </h2>
+              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden">
+                {queues.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500 dark:text-gray-400 text-sm">
+                    คุณยังไม่ได้อยู่ในคิวรอการจองใดๆ
                   </div>
-                  <p className="text-gray-500 mb-2 text-sm sm:text-base">ยังไม่มีประวัติการจอง</p>
-                  <a href="/booking.html" className="inline-block text-blue-600 hover:text-blue-700 text-sm font-medium">
-                    จองห้องตอนนี้ →
-                  </a>
-                </div>
-              ) : (
-                <div className="bg-white rounded-2xl border overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="text-left px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-600">ห้อง</th>
-                          <th className="text-left px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-600 hidden sm:table-cell">วันที่</th>
-                          <th className="text-left px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-600">เวลา</th>
-                          <th className="text-left px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-600">สถานะ</th>
-                          <th className="text-right px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-600">จัดการ</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {bookings.map(b => {
-                          const s = STATUS_LABEL[b.Status] || {};
-                          const canCancel = ['pending', 'approved'].includes(b.Status);
-                          return (
-                            <tr key={b.BookingID} className="hover:bg-gray-50">
-                              <td className="px-4 sm:px-6 py-3 sm:py-4">
-                                <div className="font-medium text-gray-800 text-sm sm:text-base">{b.RoomName}</div>
-                                <div className="text-[11px] text-gray-400 sm:hidden mt-0.5">
-                                  {formatThaiDate(b.BookingDate)}
-                                </div>
-                              </td>
-                              <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 hidden sm:table-cell">
-                                {formatThaiDate(b.BookingDate)}
-                              </td>
-                              <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-600">
-                                {b.StartTime}–{b.EndTime}
-                              </td>
-                              <td className="px-4 sm:px-6 py-3 sm:py-4">
-                                <span className={`text-xs font-medium px-2 sm:px-3 py-1 rounded-full border ${s.color}`}>
-                                  {s.label}
-                                </span>
-                              </td>
-                              <td className="px-4 sm:px-6 py-3 sm:py-4 text-right">
-                                {canCancel && (
-                                  <button onClick={() => cancelBooking(b.BookingID)}
-                                    className="text-xs sm:text-sm text-red-600 hover:text-red-700 font-medium transition">
-                                    ยกเลิก
-                                  </button>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                ) : (
+                  <div className="divide-y divide-slate-100 dark:divide-slate-700">
+                    {queues.map(q => {
+                      const s = QUEUE_LABEL[q.Status] || { label: q.Status, badge: 'app-badge-gray' };
+                      return (
+                        <div key={q.QueueID} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-slate-700/30 transition">
+                          <div className="flex items-center gap-3">
+                            <Icon.Hourglass className="w-4 h-4 text-gray-400" />
+                            <div>
+                              <div className="text-sm font-medium text-gray-800 dark:text-gray-100">{q.RoomName}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                {formatThaiDate(q.BookingDate)} · {formatTime(q.StartTime)}–{formatTime(q.EndTime)} น.
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className={`app-badge ${s.badge}`}>{s.label}</span>
+                            {q.Status === 'waiting' && (
+                              <button onClick={() => leaveQueue(q.QueueID)}
+                                className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 font-medium transition">
+                                ออกจากคิว
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             {/* My Maintenance Reports */}
-            <div className="mt-8">
+            <div>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-base sm:text-lg font-bold text-gray-800">ประวัติการแจ้งซ่อมของคุณ</h2>
-                <a href="/maintenance.html" className="text-sm text-orange-600 hover:text-orange-700 font-medium">
-                  แจ้งซ่อมใหม่ →
-                </a>
+                <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">ประวัติการแจ้งซ่อมของฉัน</h2>
+                <a href="/maintenance.html" className="text-sm text-orange-600 dark:text-orange-400 hover:text-orange-700 font-medium">แจ้งซ่อมใหม่ →</a>
               </div>
-
-              {loading ? (
-                <div className="text-center text-gray-400 py-12">กำลังโหลด...</div>
-              ) : maintenanceReports.length === 0 ? (
-                <div className="text-center py-12 bg-white rounded-2xl border">
-                  <p className="text-gray-500 mb-2 text-sm sm:text-base">ยังไม่มีประวัติการแจ้งซ่อม</p>
-                  <a href="/maintenance.html" className="inline-block text-orange-600 hover:text-orange-700 text-sm font-medium">
-                    แจ้งซ่อมตอนนี้ →
-                  </a>
-                </div>
-              ) : (
-                <div className="bg-white rounded-2xl border overflow-hidden">
+              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden">
+                {maintenanceReports.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500 dark:text-gray-400 text-sm">ยังไม่มีประวัติการแจ้งซ่อม</div>
+                ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="text-left px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-600">ห้อง</th>
-                          <th className="text-left px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-600">รายละเอียด</th>
-                          <th className="text-left px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-600">ความเร่งด่วน</th>
-                          <th className="text-left px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-600">วันที่แจ้ง</th>
-                          <th className="text-left px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-600">สถานะ</th>
-                          <th className="text-left px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-600">หมายเหตุ</th>
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/30">
+                          <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">ห้อง</th>
+                          <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">รายละเอียด</th>
+                          <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">ความเร่งด่วน</th>
+                          <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">สถานะ</th>
+                          <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">หมายเหตุ</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {maintenanceReports.map((r) => {
-                          const statusLabels = {
-                            pending: { label: 'รอดำเนินการ', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
-                            in_progress: { label: 'กำลังดำเนินการ', color: 'bg-blue-100 text-blue-800 border-blue-200' },
-                            completed: { label: 'เสร็จสิ้น', color: 'bg-green-100 text-green-800 border-green-200' },
-                            rejected: { label: 'ถูกปฏิเสธ', color: 'bg-red-100 text-red-800 border-red-200' }
-                          };
-                          const label = statusLabels[r.Status] || { label: r.Status, color: 'bg-gray-100 text-gray-800' };
-
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                        {maintenanceReports.map(r => {
+                          const s = MAINT_LABEL[r.Status] || { label: r.Status, badge: 'app-badge-gray' };
                           return (
-                            <tr key={r.ReportID} className="hover:bg-gray-50/50 transition">
-                              <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-gray-800">
-                                {r.RoomName}
-                              </td>
-                              <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 max-w-xs truncate">
-                                {r.Description}
-                              </td>
-                              <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm">
-                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                                  r.Urgency === 'urgent' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
-                                }`}>
+                            <tr key={r.ReportID} className="hover:bg-gray-50 dark:hover:bg-slate-700/30 transition">
+                              <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-100">{r.RoomName}</td>
+                              <td className="px-4 py-3 text-gray-500 dark:text-gray-400 max-w-xs truncate">{r.Description}</td>
+                              <td className="px-4 py-3">
+                                <span className={`app-badge ${r.Urgency === 'urgent' ? 'app-badge-red' : 'app-badge-gray'}`}>
                                   {r.Urgency === 'urgent' ? 'ด่วนที่สุด' : 'ปกติ'}
                                 </span>
                               </td>
-                              <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 whitespace-nowrap">
-                                {formatThaiDate(r.ReportDate)}
-                              </td>
-                              <td className="px-4 sm:px-6 py-3 sm:py-4">
-                                <span className={`text-[10px] sm:text-xs font-medium px-2 py-0.5 rounded-full border ${label.color}`}>
-                                  {label.label}
-                                </span>
-                              </td>
-                              <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 max-w-xs truncate">
-                                {r.Notes || '-'}
-                              </td>
+                              <td className="px-4 py-3"><span className={`app-badge ${s.badge}`}>{s.label}</span></td>
+                              <td className="px-4 py-3 text-gray-500 dark:text-gray-400 max-w-xs truncate">{r.Notes || '-'}</td>
                             </tr>
                           );
                         })}
                       </tbody>
                     </table>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </main>
 
@@ -780,66 +706,61 @@
             onCancel={closeConfirm}
           />
 
+          <NotificationsModal
+            open={showNotifModal}
+            notifications={notifications}
+            onClose={() => setShowNotifModal(false)}
+            onMarkRead={markNotificationRead}
+            onMarkAllRead={markAllNotificationsRead}
+          />
+
           {/* Room Details Modal */}
           {selectedDetailRoom && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 relative">
-                <button
-                  onClick={() => setSelectedDetailRoom(null)}
-                  className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"
-                  aria-label="ปิด"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl max-w-md w-full p-6 relative app-animate-in">
+                <button onClick={() => setSelectedDetailRoom(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition" aria-label="ปิด">
+                  <Icon.X className="w-6 h-6" />
                 </button>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
+                  <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center">
+                    <Icon.Camera className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-800">{selectedDetailRoom.RoomName}</h3>
-                    <p className="text-sm text-gray-500">ความจุ {selectedDetailRoom.Capacity} คน</p>
+                    <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">{selectedDetailRoom.RoomName}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                      <Icon.Users className="w-3.5 h-3.5" /> ความจุ {selectedDetailRoom.Capacity} คน
+                    </p>
                   </div>
                 </div>
-                
                 <div className="space-y-4">
                   <div>
-                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">รายละเอียด / อุปกรณ์</span>
-                    <p className="text-sm text-gray-600 mt-1 leading-relaxed">
+                    <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">รายละเอียด / อุปกรณ์</div>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
                       {selectedDetailRoom.Description || 'ไม่มีข้อมูลรายละเอียดอุปกรณ์ประจำห้อง'}
                     </p>
                   </div>
-                  
                   <div>
-                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">สถานะการจองในวันนี้</span>
+                    <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">สถานะการจองในวันนี้</div>
                     {selectedDetailRoom.bookings_today && selectedDetailRoom.bookings_today.length > 0 ? (
                       <div className="space-y-2 mt-2">
                         {selectedDetailRoom.bookings_today.map((bk, i) => (
-                          <div key={i} className="flex items-center justify-between text-xs bg-gray-50 rounded-xl px-3 py-2.5">
-                            <span className="text-gray-600 font-mono font-medium">{bk.start} - {bk.end}</span>
-                            <span className={`px-2 py-0.5 rounded-full ${STATUS_LABEL[bk.status]?.color}`}>
-                              {STATUS_LABEL[bk.status]?.label}
-                            </span>
+                          <div key={i} className="flex items-center justify-between text-xs bg-gray-50 dark:bg-slate-700/50 rounded-xl px-3 py-2.5">
+                            <span className="text-gray-600 dark:text-gray-300 font-mono font-medium">{formatTime(bk.start)}–{formatTime(bk.end)}</span>
+                            <span className={`app-badge ${(STATUS_LABEL[bk.status] || {}).badge || 'app-badge-green'}`}>{(STATUS_LABEL[bk.status] || {}).label || bk.status}</span>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-green-600 mt-2 flex items-center gap-1.5">
+                      <p className="text-sm text-green-600 dark:text-green-400 mt-2 flex items-center gap-1.5">
                         <span className="w-2 h-2 bg-green-500 rounded-full inline-block"></span>
                         ว่างตลอดทั้งวันนี้
                       </p>
                     )}
                   </div>
                 </div>
-
                 <div className="mt-6">
-                  <button
-                    onClick={() => setSelectedDetailRoom(null)}
-                    className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 rounded-xl transition-all"
-                  >
+                  <button onClick={() => setSelectedDetailRoom(null)}
+                    className="w-full bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 font-medium py-3 rounded-xl transition">
                     ปิดหน้าต่าง
                   </button>
                 </div>
@@ -849,20 +770,15 @@
 
           {/* QR Code Modal */}
           {qrRoom && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 relative">
-                <button
-                  onClick={() => setQrRoom(null)}
-                  className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"
-                  aria-label="ปิด">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl max-w-sm w-full p-6 relative app-animate-in">
+                <button onClick={() => setQrRoom(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition" aria-label="ปิด">
+                  <Icon.X className="w-5 h-5" />
                 </button>
                 <div className="text-center">
-                  <h3 className="text-lg font-bold text-gray-800 mb-2">QR Code แจ้งซ่อม</h3>
-                  <p className="text-sm text-gray-500 mb-4">{qrRoom.RoomName}</p>
-                  <div className="flex justify-center bg-gray-50 p-4 rounded-xl mb-4 border">
+                  <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-2">QR Code แจ้งซ่อม</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{qrRoom.RoomName}</p>
+                  <div className="flex justify-center bg-gray-50 dark:bg-slate-700/50 p-4 rounded-xl mb-4 border border-slate-200 dark:border-slate-700">
                     <img
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.origin + '/maintenance.html?roomId=' + qrRoom.RoomID)}`}
                       alt={`QR Code ${qrRoom.RoomName}`}
@@ -876,36 +792,21 @@
                     onClick={() => {
                       const printWindow = window.open('', '_blank');
                       printWindow.document.write(`
-                        <html>
-                          <head>
-                            <title>พิมพ์ QR Code - ${qrRoom.RoomName}</title>
-                            <style>
-                              body { font-family: sans-serif; text-align: center; padding: 50px; }
-                              .container { border: 2px dashed #ccc; padding: 30px; display: inline-block; border-radius: 10px; }
-                              img { width: 250px; height: 250px; margin-bottom: 20px; }
-                              h1 { margin: 10px 0; }
-                            </style>
-                          </head>
-                          <body>
-                            <div class="container">
-                              <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(window.location.origin + '/maintenance.html?roomId=' + qrRoom.RoomID)}" />
-                              <h1>สแกนเพื่อแจ้งซ่อม</h1>
-                              <h2>ห้อง: ${qrRoom.RoomName}</h2>
-                              <p>ระบบจองห้องผลิตสื่อดิจิทัล มหาวิทยาลัยนอร์ทกรุงเทพ</p>
-                            </div>
-                            <script>
-                              window.onload = function() { window.print(); window.close(); }
-                            <\/script>
-                          </body>
-                        </html>
+                        <html><head><title>พิมพ์ QR Code - ${qrRoom.RoomName}</title>
+                          <style>body{font-family:sans-serif;text-align:center;padding:50px}.container{border:2px dashed #ccc;padding:30px;display:inline-block;border-radius:10px}img{width:250px;height:250px;margin-bottom:20px}h1{margin:10px 0}</style>
+                        </head><body>
+                          <div class="container">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(window.location.origin + '/maintenance.html?roomId=' + qrRoom.RoomID)}" />
+                            <h1>สแกนเพื่อแจ้งซ่อม</h1>
+                            <h2>ห้อง: ${qrRoom.RoomName}</h2>
+                            <p>ระบบจองห้องผลิตสื่อดิจิทัล มหาวิทยาลัยนอร์ทกรุงเทพ</p>
+                          </div>
+                          <script>window.onload=function(){window.print();window.close()}<\/script>
+                        </body></html>
                       `);
                       printWindow.document.close();
                     }}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-xl transition text-sm flex items-center justify-center gap-2"
-                  >
-                    <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                    </svg>
+                    className="app-btn-primary w-full py-2.5 rounded-xl font-medium text-sm">
                     พิมพ์ QR Code แจ้งซ่อม
                   </button>
                 </div>
