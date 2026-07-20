@@ -186,7 +186,7 @@ bookings.post('/', requireAuth, async (c) => {
     VALUES (?, ?, ?, ?, ?, 'pending')
   `, [session.user.id, roomId, date, start, end], c.env);
 
-  const bookingId = result.insertId;
+  const bookingId = result.insertId || result.lastInsertId;
 
   // FR-11: แจ้ง Admin (notification ในระบบ) ทุกครั้งที่มีคำขอใหม่
   const admins = await executeQuery("SELECT UserID, Email FROM users WHERE Role = 'admin'", [], c.env);

@@ -1087,7 +1087,7 @@
         e.preventDefault();
         try {
           await apiFetch(`/api/rooms/${editingRoom.RoomID}`, {
-            method: 'PUT',
+            method: 'PATCH',
             body: editForm
           });
           setEditingRoom(null);

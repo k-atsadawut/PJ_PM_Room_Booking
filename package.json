@@ -15,8 +15,8 @@
     "hyperdrive": "wrangler hyperdrive"
   },
   "dependencies": {
+    "@tidbcloud/serverless": "^0.3.0",
     "hono": "^4.0.0",
-    "mysql2": "^3.6.5",
     "nodemailer": "^9.0.3"
   },
   "devDependencies": {

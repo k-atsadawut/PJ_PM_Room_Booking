@@ -30,7 +30,7 @@ queues.post('/', requireAuth, async (c) => {
     VALUES (?, ?, ?, ?, ?, 'waiting')
   `, [session.user.id, roomId, date, start, end], c.env);
 
-  return c.json({ success: true, queueId: result.insertId });
+  return c.json({ success: true, queueId: result.insertId || result.lastInsertId });
 });
 
 // GET /api/queues — ดูคิวของตัวเอง

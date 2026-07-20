@@ -32,14 +32,16 @@ adminHolidays.post('/', requireAdmin, async (c) => {
       c.env
     );
 
+    const holidayId = result.insertId || result.lastInsertId;
+
     // Verify the insert by fetching the newly created holiday
     const verifyResult = await executeQuery(
       'SELECT * FROM holidays WHERE HolidayID = ?',
-      [result.insertId],
+      [holidayId],
       c.env
     );
 
-    return c.json({ success: true, holidayId: result.insertId, holiday: verifyResult[0] });
+    return c.json({ success: true, holidayId, holiday: verifyResult[0] });
   } catch (error) {
     console.error('Error inserting holiday:', error);
     return c.json({ error: 'ไม่สามารถเพิ่มวันหยุดได้: ' + error.message }, 500);

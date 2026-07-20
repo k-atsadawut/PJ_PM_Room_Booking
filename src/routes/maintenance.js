@@ -53,7 +53,7 @@ maintenance.post('/', requireAuth, async (c) => {
     console.error('Error notifying admins:', err);
   }
 
-  return c.json({ success: true, reportId: result.insertId });
+  return c.json({ success: true, reportId });
 });
 
 // GET /api/maintenance — ดูรายการแจ้งซ่อมของตัวเอง
@@ -120,3 +120,5 @@ maintenance.patch('/:id', requireAuth, async (c) => {
 });
 
 export default maintenance;
+
+

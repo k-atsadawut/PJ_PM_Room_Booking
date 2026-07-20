@@ -4,8 +4,7 @@ compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
 
 # Environment variables (set these in wrangler.toml or use wrangler secret)
-# Use: wrangler secret put DATABASE_URL
-# Use: wrangler secret put DB_CA_CERT
+# Use: wrangler secret put TIDB_PASSWORD
 # Use: wrangler secret put SMTP_HOST
 # Use: wrangler secret put SMTP_PORT
 # Use: wrangler secret put SMTP_USER
@@ -25,11 +24,8 @@ preview_id = "YOUR_PREVIEW_KV_NAMESPACE_ID"
 # database_name = "room-booking-db"
 # database_id = "YOUR_D1_DATABASE_ID"
 
-# Hyperdrive configuration (for external MySQL/PostgreSQL)
-# Create with: wrangler hyperdrive create
-# [[hyperdrive]]
-# binding = "HYPERDRIVE"
-# id = "YOUR_HYPERDRIVE_ID"
+# TiDB Cloud Serverless Driver (for TiDB Cloud Starter)
+# No additional configuration needed - uses HTTP connection
 
 # Cron triggers for reminder scheduler
 [triggers]

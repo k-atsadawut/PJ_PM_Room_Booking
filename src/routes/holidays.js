@@ -45,7 +45,7 @@ holidays.post('/', requireAdmin, async (c) => {
     c.env
   );
 
-  return c.json({ success: true, holidayId: result.insertId });
+  return c.json({ success: true, holidayId: result.insertId || result.lastInsertId });
 });
 
 // DELETE /api/holidays/:id — ลบวันหยุด (admin only)

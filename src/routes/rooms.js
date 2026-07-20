@@ -109,7 +109,7 @@ rooms.post('/', requireAdmin, async (c) => {
     c.env
   );
 
-  return c.json({ success: true, roomId: result.insertId });
+  return c.json({ success: true, roomId: result.insertId || result.lastInsertId });
 });
 
 // PATCH /api/rooms/:id — แก้ไขห้อง (admin only)

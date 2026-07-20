@@ -41,7 +41,7 @@ adminUsers.post('/', requireAdmin, async (c) => {
     c.env
   );
 
-  return c.json({ success: true, userId: result.insertId });
+  return c.json({ success: true, userId: result.insertId || result.lastInsertId });
 });
 
 // PATCH /api/admin/users/:id — แก้ไขผู้ใช้
